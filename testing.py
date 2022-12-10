@@ -35,8 +35,8 @@ def feature_to_split_on(specificity_level, df):
     if specificity_level == -2:
         return np.unique(df[:, 1])
     elif specificity_level == -1:
-
-        print("Split based on Length")
+        length=np.vectorize(len)
+        return length(df)[:, 0]
     else:
         print("Split based on specificity_level of the first element")
 
@@ -49,7 +49,11 @@ def tree_grow(column, nmin=6):
         child_list=[]
         children_identifiers = feature_to_split_on(specificity_level=current_node.specificity_level, df=current_node.data)
         for item in children_identifiers:
-            positions = np.nonzero(np.isin(current_node.data[:, 1], item))
+            if current_node.specificity_level ==-2:
+                positions = np.nonzero(np.isin(current_node.data[:, 1], item))
+            elif current_node.specificity_level == -1:
+                length = np.vectorize(len)
+                positions = np.nonzero(np.isin(length(current_node.data[:, 0]), item))
             data_for_child = current_node.data[positions[0]]
             child = Node(current_node.name + str(random.random), data=data_for_child,
                          specificity_level=current_node.specificity_level + 1)
