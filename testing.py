@@ -63,10 +63,11 @@ def tree_grow(column, nmin=6):
             child_list.append(child)
             node_list.append(child)
         current_node.children = child_list
-        print("123")
+    return root
 
 
 if __name__ == "__main__":
     dataframe = read_data("testing.csv")
     dataframe = process_data(dataframe)
-    tree_grow(dataframe)
+    tree=tree_grow(dataframe)
+    print('123')
