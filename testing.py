@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import pandas as pd
 from anytree import *
@@ -5,6 +7,11 @@ from anytree import *
 
 def read_data(filename):
     return pd.read_csv(filename)
+
+
+def process_data(dataframe):
+    dataframe['GeneralisedUniqueElements'] = dataframe.applymap(generalise_string).applymap(find_unique_elements)
+    return dataframe
 
 
 def generalise_string(string):
@@ -21,31 +28,38 @@ def generalise_string(string):
 
 
 def find_unique_elements(generalised_string):
-    return (set(generalised_string))
+    return set(generalised_string)
 
 
-def feature_to_split_on(specifity_level, df):
-    if specifity_level == -2:
-        foobar = df.applymap(generalise_string).applymap(find_unique_elements)
-        return np.unique(np.asarray(foobar))
-    elif specifity_level == -1:
+def feature_to_split_on(specificity_level, df):
+    if specificity_level == -2:
+        return np.unique(df[:, 1])
+    elif specificity_level == -1:
+
         print("Split based on Length")
     else:
-        print("Split based on specifity_level of the first element")
+        print("Split based on specificity_level of the first element")
 
 
 def tree_grow(column, nmin=6):
-    root = Node("root", children=None, data=column, specifity_level=-2)
+    root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     while node_list:
         current_node = node_list.pop(0)
-        first_value = current_node.data.iloc[0].values[0]
-        generalised_string = generalise_string(first_value)
-        generalised_set = set(generalised_string)
-        feature_to_split_on(specifity_level=current_node.specifity_level, df=current_node.data)
+        child_list=[]
+        children_identifiers = feature_to_split_on(specificity_level=current_node.specificity_level, df=current_node.data)
+        for item in children_identifiers:
+            positions = np.nonzero(np.isin(current_node.data[:, 1], item))
+            data_for_child = current_node.data[positions[0]]
+            child = Node(current_node.name + str(random.random), data=data_for_child,
+                         specificity_level=current_node.specificity_level + 1)
+            child_list.append(child)
+            node_list.append(child)
+        current_node.children = child_list
         print("123")
 
 
 if __name__ == "__main__":
     dataframe = read_data("testing.csv")
+    dataframe = process_data(dataframe)
     tree_grow(dataframe)
