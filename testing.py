@@ -10,6 +10,10 @@ def read_data(filename):
 
 
 def process_data(dataframe):
+    # TODO: Apply numpy speedup here by using np array instead of dataframe
+    # dataframe=dataframe.to_numpy()
+    # something = np.vectorize(generalise_string)
+    # uniquely=np.vectorize(find_unique_elements)
     dataframe['GeneralisedUniqueElements'] = dataframe.applymap(generalise_string).applymap(find_unique_elements)
     return dataframe
 
