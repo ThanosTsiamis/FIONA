@@ -18,14 +18,14 @@ def generalise_string(string, specificity_level=0):
     if specificity_level >= 0:
         original_part = list(string[:specificity_level])
         edited_part = list(string[specificity_level:])
-    for index in range(len(string)):
-        if string[index].isupper():
+    for index in range(len(edited_part)):
+        if edited_part[index].isupper():
             edited_part[index] = "U"
-        elif string[index].islower():
+        elif edited_part[index].islower():
             edited_part[index] = "l"
-        elif string[index].isdigit():
+        elif edited_part[index].isdigit():
             edited_part[index] = "d"
-        elif string[index].isspace():
+        elif edited_part[index].isspace():
             edited_part[index] = "s"
     return "".join(original_part+edited_part)
 
