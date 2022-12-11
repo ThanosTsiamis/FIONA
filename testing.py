@@ -27,7 +27,7 @@ def generalise_string(string, specificity_level=0):
             edited_part[index] = "d"
         elif edited_part[index].isspace():
             edited_part[index] = "s"
-    return "".join(original_part+edited_part)
+    return "".join(original_part + edited_part)
 
 
 def find_unique_elements(generalised_string):
@@ -39,10 +39,10 @@ def feature_to_split_on(specificity_level, df):
         return np.unique(df[:, 1])
     elif specificity_level == -1:
         length = np.vectorize(len)
-        return length(df)[:, 0]
+        return set(length(df)[:, 0])
     else:
         gen = np.vectorize(generalise_string, excluded=['specificity_level'])
-        return gen(df[:, 0], specificity_level)
+        return set(gen(df[:, 0], specificity_level))
 
 
 def tree_grow(column, nmin=6):
@@ -63,9 +63,9 @@ def tree_grow(column, nmin=6):
                 positions = np.nonzero(np.isin(length(current_node.data[:, 0]), item))
             else:
                 gen = np.vectorize(generalise_string, excluded=['specificity_level'])
-                positions = np.nonzero(np.isin(gen(current_node.data[:,0],current_node.specificity_level),item))
+                positions = np.nonzero(np.isin(gen(current_node.data[:, 0], current_node.specificity_level), item))
             data_for_child = current_node.data[positions[0]]
-            child = Node(current_node.name + str(random.random),parent=current_node, data=data_for_child,
+            child = Node(current_node.name + str(random.random), parent=current_node, data=data_for_child,
                          specificity_level=current_node.specificity_level + 1)
             child_list.append(child)
             node_list.append(child)
