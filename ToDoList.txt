@@ -1,0 +1,7 @@
+~~~~
+Put the dot in the leafs which stops the process
+~~~~
+Create the distance matrix amongst the elements
+~~~
+Create the gravity function
+~~~~~~
