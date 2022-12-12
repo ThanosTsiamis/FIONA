@@ -81,7 +81,21 @@ def tree_grow(column, nmin=1):
 
 
 def node_distance(node1: Node, node2: Node):
-    return node1.depth + node2.depth - 2 * anytree.util.commonancestors(node1, node2)[0].depth
+    return node1.depth + node2.depth - 2 * anytree.util.commonancestors(node1, node2)[-1].depth
+
+
+def create_distance_matrix(leaves: tuple):
+    matrix = []
+    for first_index in range(len(leaves)):
+        row = []
+        for second_index in range(len(leaves)):
+            row.append(node_distance(leaves[first_index], leaves[second_index]))
+        matrix.append(row)
+    return np.asarray(matrix)
+
+
+def gravity_force_matrix(leaves):
+    pass
 
 
 if __name__ == "__main__":
@@ -89,8 +103,5 @@ if __name__ == "__main__":
     dataframe = process_data(dataframe)
     root = tree_grow(dataframe)
     leaves = root.leaves
-    for first_leaf in leaves:
-        for second_leaf in leaves:
-            print(node_distance(first_leaf, second_leaf))
-
+    distance_matrix = create_distance_matrix(leaves)
     print('123')
