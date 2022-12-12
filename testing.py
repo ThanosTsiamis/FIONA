@@ -1,5 +1,6 @@
 import random
 
+import anytree.util
 import numpy as np
 import pandas as pd
 from anytree import *
@@ -59,7 +60,7 @@ def tree_grow(column, nmin=1):
             continue
         children_identifiers = feature_to_split_on(specificity_level=current_node.specificity_level,
                                                    df=current_node.data)
-        if len(children_identifiers)==1 and current_node.specificity_level== len(current_node.data[0,0]):
+        if len(children_identifiers) == 1 and current_node.specificity_level == len(current_node.data[0, 0]):
             continue
         for item in children_identifiers:
             if current_node.specificity_level == -2:
@@ -79,8 +80,17 @@ def tree_grow(column, nmin=1):
     return root
 
 
+def node_distance(node1: Node, node2: Node):
+    return node1.depth + node2.depth - 2 * anytree.util.commonancestors(node1, node2)[0].depth
+
+
 if __name__ == "__main__":
     dataframe = read_data("testing.csv")
     dataframe = process_data(dataframe)
-    tree = tree_grow(dataframe)
+    root = tree_grow(dataframe)
+    leaves = root.leaves
+    for first_leaf in leaves:
+        for second_leaf in leaves:
+            print(node_distance(first_leaf, second_leaf))
+
     print('123')
