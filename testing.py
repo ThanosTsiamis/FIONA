@@ -49,7 +49,7 @@ def feature_to_split_on(specificity_level, df):
         return set(gen(df[:, 0], specificity_level))
 
 
-def tree_grow(column, nmin=6):
+def tree_grow(column, nmin=1):
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     while node_list:
@@ -59,6 +59,8 @@ def tree_grow(column, nmin=6):
             continue
         children_identifiers = feature_to_split_on(specificity_level=current_node.specificity_level,
                                                    df=current_node.data)
+        if len(children_identifiers)==1 and current_node.specificity_level== len(current_node.data[0,0]):
+            continue
         for item in children_identifiers:
             if current_node.specificity_level == -2:
                 positions = np.nonzero(np.isin(current_node.data[:, 1], item))
