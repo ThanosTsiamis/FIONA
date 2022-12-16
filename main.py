@@ -7,7 +7,7 @@ from anytree import *
 
 
 def read_data(filename):
-    return pd.read_csv(filename)
+    return pd.read_csv(filename,dtype=str)
 
 
 def process_data(dataframe):
@@ -19,7 +19,8 @@ def process_data(dataframe):
     return dataframe
 
 
-def generalise_string(string, specificity_level=0):
+def generalise_string(string: str, specificity_level=0):
+    string = str(string)
     if specificity_level >= 0:
         original_part = list(string[:specificity_level])
         edited_part = list(string[specificity_level:])
@@ -50,7 +51,7 @@ def feature_to_split_on(specificity_level, df):
         return set(gen(df[:, 0], specificity_level))
 
 
-def tree_grow(column, nmin=1):
+def tree_grow(column, nmin=10):
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     while node_list:
@@ -60,7 +61,7 @@ def tree_grow(column, nmin=1):
             continue
         children_identifiers = feature_to_split_on(specificity_level=current_node.specificity_level,
                                                    df=current_node.data)
-        if len(children_identifiers) == 1 and current_node.specificity_level == len(current_node.data[0, 0]):
+        if len(children_identifiers) == 1 and current_node.specificity_level == len(str(current_node.data[0, 0])):
             continue
         for item in children_identifiers:
             if current_node.specificity_level == -2:
@@ -94,14 +95,31 @@ def create_distance_matrix(leaves: tuple):
     return np.asarray(matrix)
 
 
+def create_enforced_siblings_vector(leaves: tuple):
+    # what I mean by enforced is that 2 leaves that have each one sibling but the one has more family should be
+    # preferred over the other
+    matrix: list = []
+    for first_index in range(len(leaves)):
+        siblings_tuple: tuple = leaves[first_index].siblings
+        siblings_population = 0
+        for sibling in siblings_tuple:
+            siblings_population += len(sibling.data)
+        print("123")
+
+    # for node in leaves:
+    #     pass
+
+
 def gravity_force_matrix(leaves):
     pass
 
 
 if __name__ == "__main__":
-    dataframe = read_data("testing.csv")
-    dataframe = process_data(dataframe)
-    root = tree_grow(dataframe)
-    leaves = root.leaves
-    distance_matrix = create_distance_matrix(leaves)
+    dataframe = read_data("resources/datasets/protein_classification.csv")
+    for column in dataframe.columns:
+        dataframe = process_data(pd.DataFrame(dataframe[column]))
+        root = tree_grow(dataframe)
+        leaves = root.leaves
+        create_enforced_siblings_vector(leaves)
+    # distance_matrix = create_distance_matrix(leaves)
     print('123')

@@ -1,7 +1,9 @@
-~~~~
-Put the dot in the leaves which stops the process
-~~~~
-Create the distance matrix amongst the elements
-~~~
+~~~~~
 Create the gravity function
 ~~~~~~
+Flask the application
+~~~~~
+Dockerise the application
+~~~~~
+Understand what the minleaf constraint is
+~~~~~
