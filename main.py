@@ -1,13 +1,14 @@
 import random
 
 import anytree.util
+import numpy
 import numpy as np
 import pandas as pd
 from anytree import *
 
 
 def read_data(filename):
-    return pd.read_csv(filename,dtype=str)
+    return pd.read_csv(filename, dtype=str)
 
 
 def process_data(dataframe):
@@ -15,6 +16,7 @@ def process_data(dataframe):
     # dataframe=dataframe.to_numpy()
     # something = np.vectorize(generalise_string)
     # uniquely=np.vectorize(find_unique_elements)
+    dataframe = dataframe.fillna('')
     dataframe['GeneralisedUniqueElements'] = dataframe.applymap(generalise_string).applymap(find_unique_elements)
     return dataframe
 
@@ -32,6 +34,8 @@ def generalise_string(string: str, specificity_level=0):
         elif edited_part[index].isdigit():
             edited_part[index] = "d"
         elif edited_part[index].isspace():
+            edited_part[index] = "w"
+        elif not edited_part[index].isalnum():
             edited_part[index] = "s"
     return "".join(original_part + edited_part)
 
@@ -40,9 +44,20 @@ def find_unique_elements(generalised_string):
     return set(generalised_string)
 
 
+def unique_array_fixed(uniqued_array: numpy.ndarray):
+    # TODO: Find why do we have to use that here instead of actual unique
+    next_unique = np.unique(uniqued_array)
+    while next_unique.size != uniqued_array.size:
+        uniqued_array = next_unique
+        next_unique = np.unique(next_unique)
+    return uniqued_array
+
+
 def feature_to_split_on(specificity_level, df):
     if specificity_level == -2:
-        return np.unique(df[:, 1])
+        # TODO : FIX HERE
+        res = [i for n, i in enumerate(df[:,1]) if i not in df[:,1][:n]]
+        return res
     elif specificity_level == -1:
         length = np.vectorize(len)
         return set(length(df)[:, 0])
@@ -51,7 +66,7 @@ def feature_to_split_on(specificity_level, df):
         return set(gen(df[:, 0], specificity_level))
 
 
-def tree_grow(column, nmin=10):
+def tree_grow(column, nmin=30):
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     while node_list:
@@ -117,9 +132,10 @@ def gravity_force_matrix(leaves):
 if __name__ == "__main__":
     dataframe = read_data("resources/datasets/protein_classification.csv")
     for column in dataframe.columns:
-        dataframe = process_data(pd.DataFrame(dataframe[column]))
-        root = tree_grow(dataframe)
+        attribute = process_data(pd.DataFrame(dataframe[column]))
+        root = tree_grow(attribute)
         leaves = root.leaves
-        create_enforced_siblings_vector(leaves)
+        print("123")
+        # create_enforced_siblings_vector(leaves)
     # distance_matrix = create_distance_matrix(leaves)
     print('123')
