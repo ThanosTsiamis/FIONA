@@ -7,3 +7,7 @@ Dockerise the application
 ~~~~~
 Understand what the minleaf constraint is
 ~~~~~
+Fix specificity level
+~~~~~~~~~
+Put the representative name inside the node class
+~~~~~~

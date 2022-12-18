@@ -130,12 +130,12 @@ def gravity_force_matrix(leaves):
 
 
 if __name__ == "__main__":
-    dataframe = read_data("resources/datasets/protein_classification.csv")
+    dataframe = read_data("resources/datasets/10492-1.csv")
     for column in dataframe.columns:
         attribute = process_data(pd.DataFrame(dataframe[column]))
         root = tree_grow(attribute)
         leaves = root.leaves
+        distance_matrix = create_distance_matrix(leaves)
         print("123")
         # create_enforced_siblings_vector(leaves)
-    # distance_matrix = create_distance_matrix(leaves)
     print('123')
