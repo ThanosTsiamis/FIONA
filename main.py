@@ -148,9 +148,11 @@ def calculate_upper_lower_outliers():
 
 app = Flask(__name__)
 
+
 @app.route('/')
 def hello():
     return "<p>Hello, World!</p>"
+
 
 if __name__ == "__main__":
     dataframe = read_data("resources/datasets/10492-1.csv")
