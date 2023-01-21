@@ -1,13 +1,11 @@
 ~~~~~
 Create the gravity function
-~~~~~~
-Flask the application
 ~~~~~
 Dockerise the application
 ~~~~~
 Understand what the minleaf constraint is
 ~~~~~
-Fix specificity level
-~~~~~~~~~
 Put the representative name inside the node class
 ~~~~~~
+Calculate frequency of each element
+~~~~~~~~~

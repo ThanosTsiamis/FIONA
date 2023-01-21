@@ -1,10 +1,12 @@
 import random
+from collections import Counter
 
 import anytree.util
 import numpy
 import numpy as np
 import pandas as pd
 from anytree import *
+from flask import Flask
 
 
 def read_data(filename):
@@ -56,17 +58,18 @@ def unique_array_fixed(uniqued_array: numpy.ndarray):
 def feature_to_split_on(specificity_level, df):
     if specificity_level == -2:
         # TODO : FIX HERE
-        res = [i for n, i in enumerate(df[:,1]) if i not in df[:,1][:n]]
+        res = [i for n, i in enumerate(df[:, 1]) if i not in df[:, 1][:n]]
         return res
     elif specificity_level == -1:
         length = np.vectorize(len)
-        return set(length(df)[:, 0])
+        result = set(length(df)[:, 0])
+        return result
     else:
         gen = np.vectorize(generalise_string, excluded=['specificity_level'])
         return set(gen(df[:, 0], specificity_level))
 
 
-def tree_grow(column, nmin=30):
+def tree_grow(column, nmin=2):
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     while node_list:
@@ -125,9 +128,29 @@ def create_enforced_siblings_vector(leaves: tuple):
     #     pass
 
 
+def ratio_vector(leaves: tuple, attribute: pd.DataFrame):
+    vector = []
+    attribute_size = len(attribute)
+    for leaf in leaves:
+        leaf_observation_count = len(leaf.data)
+        leaf_ratio = leaf_observation_count / attribute_size
+        vector.append(leaf_ratio)
+    return np.asarray(vector)
+
+
 def gravity_force_matrix(leaves):
     pass
 
+
+def calculate_upper_lower_outliers():
+    pass
+
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    return "<p>Hello, World!</p>"
 
 if __name__ == "__main__":
     dataframe = read_data("resources/datasets/10492-1.csv")
@@ -136,6 +159,19 @@ if __name__ == "__main__":
         root = tree_grow(attribute)
         leaves = root.leaves
         distance_matrix = create_distance_matrix(leaves)
+        print("123")
+        vector = ratio_vector(leaves, attribute)
+        keys = Counter(vector).keys()  # equals to list(set(words))
+        values = Counter(vector).values()
+        uniques = np.unique(vector)
+        # Compress ratio
+        lista = []
+        listb = []
+        for leaf in leaves:
+            if len(leaf.data) > 2:
+                lista.append(leaf.data)
+            else:
+                listb.append(leaf.data)
         print("123")
         # create_enforced_siblings_vector(leaves)
     print('123')
