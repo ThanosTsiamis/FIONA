@@ -56,7 +56,7 @@ def unique_array_fixed(uniqued_array: numpy.ndarray):
 def feature_to_split_on(specificity_level, df):
     if specificity_level == -2:
         # TODO : FIX HERE
-        res = [i for n, i in enumerate(df[:,1]) if i not in df[:,1][:n]]
+        res = [i for n, i in enumerate(df[:, 1]) if i not in df[:, 1][:n]]
         return res
     elif specificity_level == -1:
         length = np.vectorize(len)
@@ -125,8 +125,14 @@ def create_enforced_siblings_vector(leaves: tuple):
     #     pass
 
 
-def gravity_force_matrix(leaves):
-    pass
+def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
+    matrix:list = []
+    for i in range(len(distance_matrix)):
+        row = []
+        for j in range(len(distance_matrix[0])):
+            row.append(leaves[i].data.shape[0] *leaves[j].data.shape[0]/(distance_matrix[i][j])**2)
+        matrix.append(row)
+    return np.asarray(matrix)
 
 
 if __name__ == "__main__":
@@ -136,6 +142,7 @@ if __name__ == "__main__":
         root = tree_grow(attribute)
         leaves = root.leaves
         distance_matrix = create_distance_matrix(leaves)
+        score_matrix = score_function(leaves,distance_matrix)
         print("123")
         # create_enforced_siblings_vector(leaves)
     print('123')
