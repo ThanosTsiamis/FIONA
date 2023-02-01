@@ -66,7 +66,7 @@ def feature_to_split_on(specificity_level, df):
         return set(gen(df[:, 0], specificity_level))
 
 
-def tree_grow(column, nDistinctMin=3):
+def tree_grow(column, nDistinctMin=2):
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     while node_list:
@@ -112,39 +112,42 @@ def create_distance_matrix(leaves: tuple):
     return matrix
 
 
-def create_enforced_siblings_vector(leaves: tuple):
-    # what I mean by enforced is that 2 leaves that have each one sibling but the one has more family should be
-    # preferred over the other
-    matrix: list = []
-    for first_index in range(len(leaves)):
-        siblings_tuple: tuple = leaves[first_index].siblings
-        siblings_population = 0
-        for sibling in siblings_tuple:
-            siblings_population += len(sibling.data)
-        print("123")
+# def create_enforced_siblings_vector(leaves: tuple):
+#     # what I mean by enforced is that 2 leaves that have each one sibling but the one has more family should be
+#     # preferred over the other
+#     matrix: list = []
+#     for first_index in range(len(leaves)):
+#         siblings_tuple: tuple = leaves[first_index].siblings
+#         siblings_population = 0
+#         for sibling in siblings_tuple:
+#             siblings_population += len(sibling.data)
+#         print("123")
 
-    # for node in leaves:
-    #     pass
+def median_absolute_difference():
+    pass
 
 
 def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
-    matrix: list = []
+    matrix = np.empty([len(leaves), len(leaves)])
     for i in range(len(distance_matrix)):
-        row = []
-        for j in range(len(distance_matrix[0])):
-            row.append(leaves[i].data.shape[0] * leaves[j].data.shape[0] / (distance_matrix[i][j]) ** 2)
-        matrix.append(row)
-    return np.asarray(matrix)
+        for j in range(i, len(distance_matrix[0])):
+            score = leaves[i].data.shape[0] * leaves[j].data.shape[0] / (distance_matrix[i][j]) ** 2
+            score = score / (leaves[i].data.shape[0] - leaves[j].data.shape[0] + 1)
+            matrix[i][j] = score
+    matrix = matrix + matrix.T
+    return matrix
 
 
 if __name__ == "__main__":
-    dataframe = read_data("resources/datasets/10492-1.csv")
+    dataframe = read_data("resources/datasets/simpleDataBase.csv")
     for column in dataframe.columns:
         attribute = process_data(pd.DataFrame(dataframe[column]))
         root = tree_grow(attribute)
         leaves = root.leaves
         distance_matrix = create_distance_matrix(leaves)
         score_matrix = score_function(leaves, distance_matrix)
-        print("123")
+        medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
+        median_of_medians = np.median(medians)
+        threshold = 5
         # create_enforced_siblings_vector(leaves)
-    print('123')
+    print('')
