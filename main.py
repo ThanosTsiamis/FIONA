@@ -66,13 +66,13 @@ def feature_to_split_on(specificity_level, df):
         return set(gen(df[:, 0], specificity_level))
 
 
-def tree_grow(column, nmin=3):
+def tree_grow(column, nDistinctMin=3):
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     while node_list:
         current_node = node_list.pop(0)
         child_list = []
-        if len(current_node.data) < nmin and current_node.specificity_level > 0:
+        if np.unique(current_node.data[:, 0]).shape[0] < nDistinctMin and current_node.specificity_level > 0:
             continue
         children_identifiers = feature_to_split_on(specificity_level=current_node.specificity_level,
                                                    df=current_node.data)
@@ -138,7 +138,6 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
 
 
 if __name__ == "__main__":
-    print("DONT FORGET NMIN")
     dataframe = read_data("resources/datasets/10492-1.csv")
     for column in dataframe.columns:
         attribute = process_data(pd.DataFrame(dataframe[column]))
