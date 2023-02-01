@@ -58,7 +58,7 @@ def unique_array_fixed(uniqued_array: numpy.ndarray):
 def feature_to_split_on(specificity_level, df):
     if specificity_level == -2:
         # TODO : FIX HERE
-        res = [i for n, i in enumerate(df[:, 1]) if i not in df[:, 1][:n]]
+        res = [i for n, i in enumerate(df[:,1]) if i not in df[:,1][:n]]
         return res
     elif specificity_level == -1:
         length = np.vectorize(len)
@@ -69,13 +69,13 @@ def feature_to_split_on(specificity_level, df):
         return set(gen(df[:, 0], specificity_level))
 
 
-def tree_grow(column, nmin=2):
+def tree_grow(column, nDistinctMin=2):
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     while node_list:
         current_node = node_list.pop(0)
         child_list = []
-        if len(current_node.data) < nmin and current_node.specificity_level > 0:
+        if np.unique(current_node.data[:, 0]).shape[0] < nDistinctMin and current_node.specificity_level > 0:
             continue
         children_identifiers = feature_to_split_on(specificity_level=current_node.specificity_level,
                                                    df=current_node.data)
@@ -100,46 +100,42 @@ def tree_grow(column, nmin=2):
 
 
 def node_distance(node1: Node, node2: Node):
-    return node1.depth + node2.depth - 2 * anytree.util.commonancestors(node1, node2)[-1].depth
+    return (node1.depth + node2.depth) - 2 * anytree.util.commonancestors(node1, node2)[-1].depth
 
 
 def create_distance_matrix(leaves: tuple):
-    matrix = []
+    matrix = np.empty([len(leaves), len(leaves)])
     for first_index in range(len(leaves)):
-        row = []
-        for second_index in range(len(leaves)):
-            row.append(node_distance(leaves[first_index], leaves[second_index]))
-        matrix.append(row)
-    return np.asarray(matrix)
+        for second_index in range(first_index, len(leaves)):
+            if first_index == second_index:
+                matrix[first_index][second_index] = 0
+            else:
+                matrix[first_index][second_index] = (node_distance(leaves[first_index], leaves[second_index]))
+    matrix = matrix + matrix.T
+    return matrix
 
 
-def create_enforced_siblings_vector(leaves: tuple):
-    # what I mean by enforced is that 2 leaves that have each one sibling but the one has more family should be
-    # preferred over the other
-    matrix: list = []
-    for first_index in range(len(leaves)):
-        siblings_tuple: tuple = leaves[first_index].siblings
-        siblings_population = 0
-        for sibling in siblings_tuple:
-            siblings_population += len(sibling.data)
-        print("123")
-
-    # for node in leaves:
-    #     pass
+# def create_enforced_siblings_vector(leaves: tuple):
+#     # what I mean by enforced is that 2 leaves that have each one sibling but the one has more family should be
+#     # preferred over the other
+#     matrix: list = []
+#     for first_index in range(len(leaves)):
+#         siblings_tuple: tuple = leaves[first_index].siblings
+#         siblings_population = 0
+#         for sibling in siblings_tuple:
+#             siblings_population += len(sibling.data)
+#         print("123")
 
 
-def ratio_vector(leaves: tuple, attribute: pd.DataFrame):
-    vector = []
-    attribute_size = len(attribute)
-    for leaf in leaves:
-        leaf_observation_count = len(leaf.data)
-        leaf_ratio = leaf_observation_count / attribute_size
-        vector.append(leaf_ratio)
-    return np.asarray(vector)
-
-
-def gravity_force_matrix(leaves):
-    pass
+def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
+    matrix = np.empty([len(leaves), len(leaves)])
+    for i in range(len(distance_matrix)):
+        for j in range(i, len(distance_matrix[0])):
+            score = leaves[i].data.shape[0] * leaves[j].data.shape[0] / (distance_matrix[i][j]) ** 2
+            score = score / (leaves[i].data.shape[0] - leaves[j].data.shape[0] + 1)
+            matrix[i][j] = score
+    matrix = matrix + matrix.T
+    return matrix
 
 
 def calculate_upper_lower_outliers():
@@ -155,25 +151,27 @@ def hello():
 
 
 if __name__ == "__main__":
-    dataframe = read_data("resources/datasets/10492-1.csv")
+    dataframe = read_data("resources/datasets/testing.csv")
     for column in dataframe.columns:
         attribute = process_data(pd.DataFrame(dataframe[column]))
         root = tree_grow(attribute)
         leaves = root.leaves
         distance_matrix = create_distance_matrix(leaves)
-        print("123")
-        vector = ratio_vector(leaves, attribute)
-        keys = Counter(vector).keys()  # equals to list(set(words))
-        values = Counter(vector).values()
-        uniques = np.unique(vector)
-        # Compress ratio
-        lista = []
-        listb = []
-        for leaf in leaves:
-            if len(leaf.data) > 2:
-                lista.append(leaf.data)
-            else:
-                listb.append(leaf.data)
-        print("123")
+        score_matrix = score_function(leaves, distance_matrix)
+        medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
+        median_of_medians = np.median(medians)
+        mean_absolute_deviation = abs(medians - median_of_medians)
+        # TODO : Make threshold dynamic
+        threshold = 0.4826 / 2
+        upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
+        lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
+        if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
+            print("NOTHING TO REPORT")
+        else:
+            print("REPORTED OUTLIERS")
+            for i in upper_outlying_indices:
+                print(leaves[i.item()].data)
+            for j in lower_outlying_indices:
+                print(leaves[j.item()].data)
         # create_enforced_siblings_vector(leaves)
-    print('123')
+    print('')
