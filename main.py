@@ -66,7 +66,7 @@ def feature_to_split_on(specificity_level, df):
         return set(gen(df[:, 0], specificity_level))
 
 
-def tree_grow(column, nmin=30):
+def tree_grow(column, nmin=3):
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     while node_list:
@@ -97,17 +97,19 @@ def tree_grow(column, nmin=30):
 
 
 def node_distance(node1: Node, node2: Node):
-    return node1.depth + node2.depth - 2 * anytree.util.commonancestors(node1, node2)[-1].depth
+    return (node1.depth + node2.depth) - 2 * anytree.util.commonancestors(node1, node2)[-1].depth
 
 
 def create_distance_matrix(leaves: tuple):
-    matrix = []
+    matrix = np.empty([len(leaves), len(leaves)])
     for first_index in range(len(leaves)):
-        row = []
-        for second_index in range(len(leaves)):
-            row.append(node_distance(leaves[first_index], leaves[second_index]))
-        matrix.append(row)
-    return np.asarray(matrix)
+        for second_index in range(first_index, len(leaves)):
+            if first_index == second_index:
+                matrix[first_index][second_index] = 0
+            else:
+                matrix[first_index][second_index] = (node_distance(leaves[first_index], leaves[second_index]))
+    matrix = matrix + matrix.T
+    return matrix
 
 
 def create_enforced_siblings_vector(leaves: tuple):
@@ -126,23 +128,24 @@ def create_enforced_siblings_vector(leaves: tuple):
 
 
 def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
-    matrix:list = []
+    matrix: list = []
     for i in range(len(distance_matrix)):
         row = []
         for j in range(len(distance_matrix[0])):
-            row.append(leaves[i].data.shape[0] *leaves[j].data.shape[0]/(distance_matrix[i][j])**2)
+            row.append(leaves[i].data.shape[0] * leaves[j].data.shape[0] / (distance_matrix[i][j]) ** 2)
         matrix.append(row)
     return np.asarray(matrix)
 
 
 if __name__ == "__main__":
+    print("DONT FORGET NMIN")
     dataframe = read_data("resources/datasets/10492-1.csv")
     for column in dataframe.columns:
         attribute = process_data(pd.DataFrame(dataframe[column]))
         root = tree_grow(attribute)
         leaves = root.leaves
         distance_matrix = create_distance_matrix(leaves)
-        score_matrix = score_function(leaves,distance_matrix)
+        score_matrix = score_function(leaves, distance_matrix)
         print("123")
         # create_enforced_siblings_vector(leaves)
     print('123')
