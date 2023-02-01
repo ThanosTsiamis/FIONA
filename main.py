@@ -123,9 +123,6 @@ def create_distance_matrix(leaves: tuple):
 #             siblings_population += len(sibling.data)
 #         print("123")
 
-def median_absolute_difference():
-    pass
-
 
 def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
     matrix = np.empty([len(leaves), len(leaves)])
@@ -139,7 +136,7 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
 
 
 if __name__ == "__main__":
-    dataframe = read_data("resources/datasets/simpleDataBase.csv")
+    dataframe = read_data("resources/datasets/testing.csv")
     for column in dataframe.columns:
         attribute = process_data(pd.DataFrame(dataframe[column]))
         root = tree_grow(attribute)
@@ -148,6 +145,18 @@ if __name__ == "__main__":
         score_matrix = score_function(leaves, distance_matrix)
         medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
         median_of_medians = np.median(medians)
-        threshold = 5
+        mean_absolute_deviation = abs(medians - median_of_medians)
+        # TODO : Make threshold dynamic
+        threshold = 0.4826 / 2
+        upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
+        lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
+        if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
+            print("NOTHING TO REPORT")
+        else:
+            print("REPORTED OUTLIERS")
+            for i in upper_outlying_indices:
+                print(leaves[i.item()].data)
+            for j in lower_outlying_indices:
+                print(leaves[j.item()].data)
         # create_enforced_siblings_vector(leaves)
     print('')
