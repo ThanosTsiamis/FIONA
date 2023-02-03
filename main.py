@@ -2,11 +2,14 @@ import random
 from collections import Counter
 
 import anytree.util
+import networkx as nx
 import numpy
 import numpy as np
 import pandas as pd
 from anytree import *
 from flask import Flask
+
+app = Flask("test")
 
 
 def read_data(filename):
@@ -14,10 +17,6 @@ def read_data(filename):
 
 
 def process_data(dataframe):
-    # TODO: Apply numpy speedup here by using np array instead of dataframe
-    # dataframe=dataframe.to_numpy()
-    # something = np.vectorize(generalise_string)
-    # uniquely=np.vectorize(find_unique_elements)
     dataframe = dataframe.fillna('')
     dataframe['GeneralisedUniqueElements'] = dataframe.applymap(generalise_string).applymap(find_unique_elements)
     return dataframe
@@ -131,8 +130,11 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
     matrix = np.empty([len(leaves), len(leaves)])
     for i in range(len(distance_matrix)):
         for j in range(i, len(distance_matrix[0])):
-            score = leaves[i].data.shape[0] * leaves[j].data.shape[0] / (distance_matrix[i][j]) ** 2
-            score = score / (leaves[i].data.shape[0] - leaves[j].data.shape[0] + 1)
+            masses_multiplication = leaves[i].data.shape[0] * leaves[j].data.shape[0]
+            distance_squared = (distance_matrix[i][j]) ** 2
+            masses_difference = abs(leaves[i].data.shape[0] - leaves[j].data.shape[0]) + 1
+            score = masses_multiplication / distance_squared
+            score /= masses_difference
             matrix[i][j] = score
     matrix = matrix + matrix.T
     return matrix
@@ -142,7 +144,7 @@ def calculate_upper_lower_outliers():
     pass
 
 
-app = Flask(__name__)
+
 
 
 @app.route('/')
@@ -151,18 +153,22 @@ def hello():
 
 
 if __name__ == "__main__":
-    dataframe = read_data("resources/datasets/testing.csv")
+    app.run()
+    dataframe = read_data("resources/datasets/adult.csv")
+    graph = nx.Graph()
     for column in dataframe.columns:
+        # column="short_name"
         attribute = process_data(pd.DataFrame(dataframe[column]))
         root = tree_grow(attribute)
         leaves = root.leaves
+        graph.add_nodes_from(leaves)
         distance_matrix = create_distance_matrix(leaves)
         score_matrix = score_function(leaves, distance_matrix)
         medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
         median_of_medians = np.median(medians)
         mean_absolute_deviation = abs(medians - median_of_medians)
         # TODO : Make threshold dynamic
-        threshold = 0.4826 / 2
+        threshold = 0.4826
         upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
         lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
         if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
@@ -173,5 +179,4 @@ if __name__ == "__main__":
                 print(leaves[i.item()].data)
             for j in lower_outlying_indices:
                 print(leaves[j.item()].data)
-        # create_enforced_siblings_vector(leaves)
     print('')
