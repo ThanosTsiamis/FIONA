@@ -34,6 +34,16 @@
   border-radius: var(--border-radius);
 }
 
+.footer{
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background-color: #ffffff;
+  color: #000000;
+  text-align: left;
+}
+
 .code {
   font-weight: 700;
   font-family: var(--font-mono);
