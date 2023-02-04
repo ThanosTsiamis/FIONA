@@ -115,7 +115,7 @@ def create_distance_matrix(leaves: tuple):
 
 def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
     # Order is depth,height,width
-    matrix = np.empty([3, len(leaves), len(leaves)])
+    matrix = np.empty([4, len(leaves), len(leaves)])
     for i in range(len(distance_matrix)):
         for j in range(i, len(distance_matrix[0])):
             masses_multiplication = leaves[i].data.shape[0] * leaves[j].data.shape[0]
@@ -129,8 +129,11 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
 
     outcome = np.divide(matrix[0], matrix[1], out=np.zeros_like(matrix[0]), where=matrix[1] != 0)
     outcome2 = np.divide(outcome, matrix[2], out=np.zeros_like(outcome), where=matrix[2] != 0)
-    outcome2 = outcome2 + outcome2.T
-    return outcome2
+    matrix[3] = outcome2 + outcome2.T
+    matrix[2] = matrix[2] + matrix[2].T
+    matrix[1] = matrix[1] + matrix[1].T
+    matrix[0] = matrix[0] + matrix[0].T
+    return matrix
 
 
 def calculate_upper_lower_outliers():
@@ -160,7 +163,8 @@ if __name__ == "__main__":
         leaves = root.leaves
         graph.add_nodes_from(leaves)
         distance_matrix = create_distance_matrix(leaves)
-        score_matrix = score_function(leaves, distance_matrix)
+        matrices_packet = score_function(leaves, distance_matrix)
+        score_matrix = matrices_packet[3]
         medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
         median_of_medians = np.median(medians)
         mean_absolute_deviation = abs(medians - median_of_medians)
@@ -171,7 +175,11 @@ if __name__ == "__main__":
         # add here the explanation of the results
         example_index = upper_outlying_indices[4]
         example_median = medians[example_index]
-
+        # For now assume that the count is odd such that the median is one of them
+        # TODO: Assume the second case late
+        alpha = matrices_packet[0][:][(score_matrix[:, example_index] == example_median).nonzero()[0]]
+        beta = matrices_packet[1][:][(score_matrix[:, example_index] == example_median).nonzero()[0]]
+        gamma = matrices_packet[2][:][(score_matrix[:, example_index] == example_median).nonzero()[0]]
         print("    ")
 
         if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
