@@ -1,5 +1,4 @@
 import random
-from collections import Counter
 
 import anytree.util
 import networkx as nx
@@ -7,7 +6,7 @@ import numpy
 import numpy as np
 import pandas as pd
 from anytree import *
-from flask import Flask
+from flask import Flask, request
 
 app = Flask("test")
 
@@ -16,7 +15,7 @@ def read_data(filename):
     return pd.read_csv(filename, dtype=str)
 
 
-def process_data(dataframe):
+def process_data(dataframe: pd.DataFrame):
     dataframe = dataframe.fillna('')
     dataframe['GeneralisedUniqueElements'] = dataframe.applymap(generalise_string).applymap(find_unique_elements)
     return dataframe
@@ -57,7 +56,7 @@ def unique_array_fixed(uniqued_array: numpy.ndarray):
 def feature_to_split_on(specificity_level, df):
     if specificity_level == -2:
         # TODO : FIX HERE
-        res = [i for n, i in enumerate(df[:,1]) if i not in df[:,1][:n]]
+        res = [i for n, i in enumerate(df[:, 1]) if i not in df[:, 1][:n]]
         return res
     elif specificity_level == -1:
         length = np.vectorize(len)
@@ -114,37 +113,28 @@ def create_distance_matrix(leaves: tuple):
     return matrix
 
 
-# def create_enforced_siblings_vector(leaves: tuple):
-#     # what I mean by enforced is that 2 leaves that have each one sibling but the one has more family should be
-#     # preferred over the other
-#     matrix: list = []
-#     for first_index in range(len(leaves)):
-#         siblings_tuple: tuple = leaves[first_index].siblings
-#         siblings_population = 0
-#         for sibling in siblings_tuple:
-#             siblings_population += len(sibling.data)
-#         print("123")
-
-
 def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
-    matrix = np.empty([len(leaves), len(leaves)])
+    # Order is depth,height,width
+    matrix = np.empty([3, len(leaves), len(leaves)])
     for i in range(len(distance_matrix)):
         for j in range(i, len(distance_matrix[0])):
             masses_multiplication = leaves[i].data.shape[0] * leaves[j].data.shape[0]
-            distance_squared = (distance_matrix[i][j]) ** 2
+            matrix[0][i][j] = masses_multiplication
+
+            distance_squared = ((distance_matrix[i][j]) ** 2)
+            matrix[1][i][j] = distance_squared
+
             masses_difference = abs(leaves[i].data.shape[0] - leaves[j].data.shape[0]) + 1
-            score = masses_multiplication / distance_squared
-            score /= masses_difference
-            matrix[i][j] = score
-    matrix = matrix + matrix.T
-    return matrix
+            matrix[2][i][j] = masses_difference
+
+    outcome = np.divide(matrix[0], matrix[1], out=np.zeros_like(matrix[0]), where=matrix[1] != 0)
+    outcome2 = np.divide(outcome, matrix[2], out=np.zeros_like(outcome), where=matrix[2] != 0)
+    outcome2 = outcome2 + outcome2.T
+    return outcome2
 
 
 def calculate_upper_lower_outliers():
     pass
-
-
-
 
 
 @app.route('/')
@@ -152,8 +142,15 @@ def hello():
     return "<p>Hello, World!</p>"
 
 
+@app.route('/upload_file', methods=['POST'])
+def upload_file():
+    file = request.files['file']
+    print(file)
+    return "done"
+
+
 if __name__ == "__main__":
-    app.run()
+    # app.run(debug=False)
     dataframe = read_data("resources/datasets/adult.csv")
     graph = nx.Graph()
     for column in dataframe.columns:
@@ -171,12 +168,20 @@ if __name__ == "__main__":
         threshold = 0.4826
         upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
         lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
+        # add here the explanation of the results
+        example_index = upper_outlying_indices[4]
+        example_median = medians[example_index]
+
+        print("    ")
+
         if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
             print("NOTHING TO REPORT")
         else:
-            print("REPORTED OUTLIERS")
+            print("Report outliers for the column " + column)
             for i in upper_outlying_indices:
-                print(leaves[i.item()].data)
+                element, count = np.unique(leaves[i.item].data[:, 0], return_counts=True)
+                print(str(element) + " appears " + str(count) + " times")
             for j in lower_outlying_indices:
-                print(leaves[j.item()].data)
+                element, count = np.unique(leaves[j.item].data[:, 0], return_counts=True)
+                print(str(element) + " appears " + str(count) + " times")
     print('')
