@@ -118,22 +118,25 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
     matrix = np.empty([4, len(leaves), len(leaves)])
     for i in range(len(distance_matrix)):
         for j in range(i, len(distance_matrix[0])):
-            masses_multiplication = leaves[i].data.shape[0] * leaves[j].data.shape[0]
-            matrix[0][i][j] = masses_multiplication
+            if i == j:
+                matrix[0][i][j] = 0
+            else:
+                masses_multiplication = leaves[i].data.shape[0] * leaves[j].data.shape[0]
+                matrix[0][i][j] = masses_multiplication
 
-            distance_squared = ((distance_matrix[i][j]) ** 2)
-            matrix[1][i][j] = distance_squared
+        distance_squared = ((distance_matrix[i][j]) ** 2)
+        matrix[1][i][j] = distance_squared
 
-            masses_difference = abs(leaves[i].data.shape[0] - leaves[j].data.shape[0]) + 1
-            matrix[2][i][j] = masses_difference
+        masses_difference = abs(leaves[i].data.shape[0] - leaves[j].data.shape[0]) + 1
+        matrix[2][i][j] = masses_difference
 
-    outcome = np.divide(matrix[0], matrix[1], out=np.zeros_like(matrix[0]), where=matrix[1] != 0)
-    outcome2 = np.divide(outcome, matrix[2], out=np.zeros_like(outcome), where=matrix[2] != 0)
-    matrix[3] = outcome2 + outcome2.T
-    matrix[2] = matrix[2] + matrix[2].T
-    matrix[1] = matrix[1] + matrix[1].T
-    matrix[0] = matrix[0] + matrix[0].T
-    return matrix
+        outcome = np.divide(matrix[0], matrix[1], out=np.zeros_like(matrix[0]), where=matrix[1] != 0)
+        outcome2 = np.divide(outcome, matrix[2], out=np.zeros_like(outcome), where=matrix[2] != 0)
+        matrix[3] = outcome2 + outcome2.T
+        matrix[2] = matrix[2] + matrix[2].T
+        matrix[1] = matrix[1] + matrix[1].T
+        matrix[0] = matrix[0] + matrix[0].T
+        return matrix
 
 
 def calculate_upper_lower_outliers():
@@ -152,9 +155,36 @@ def upload_file():
     return "done"
 
 
+def partial_derivative(oddCase: bool, alpha_list: list, beta_list: list, gamma_list: list):
+    if oddCase:
+        alpha_partial_derivative = (1 / beta_list[0]) * (1 / gamma_list[0])
+        beta_partial_derivative = -alpha_list[0] / ((beta_list[0] ** 2) * gamma_list[0])
+        gamma_partial_derivative = -alpha_list[0] / ((gamma_list[0] ** 2) * beta_list[0])
+    else:
+        alpha_partial_derivative = 0.5 * ((1 / (beta_list[0] * gamma_list[0])) + (1 / (beta_list[1] * gamma_list[1])))
+        beta_partial_derivative = -0.5 * ((alpha_list[0] / (gamma_list[0] * (beta_list[0] ** 2))) + (
+                alpha_list[1] / (gamma_list[1] * (beta_list[1] ** 2))))
+        gamma_partial_derivative = -0.5 * ((alpha_list[0] / (beta_list[0] * (gamma_list[0] ** 2))) + (
+                alpha_list[1] / (beta_list[1] * (gamma_list[1] ** 2))))
+    return alpha_partial_derivative, beta_partial_derivative, gamma_partial_derivative
+
+
+def get_index_of_median(odd_number_of_elements: bool, input_list: np.ndarray, median):
+    if odd_number_of_elements:
+        # the median is one of the elements
+        return np.argwhere(input_list == median)
+    else:
+        # find the element closest to the median and take its symmetric based on the median
+        # consider the distance of the first element to be the smallest
+        min_dif = abs(input_list - median)
+        bottom_index = np.argmin(min_dif)
+        top_index = np.argwhere(input_list == (min_dif + input_list[bottom_index]))
+        return bottom_index, top_index
+
+
 if __name__ == "__main__":
     # app.run(debug=False)
-    dataframe = read_data("resources/datasets/adult.csv")
+    dataframe = read_data("resources/datasets/testing.csv")
     graph = nx.Graph()
     for column in dataframe.columns:
         # column="short_name"
@@ -166,6 +196,7 @@ if __name__ == "__main__":
         matrices_packet = score_function(leaves, distance_matrix)
         score_matrix = matrices_packet[3]
         medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
+        # Median of medians may not be a value of the vector but it may be in between.
         median_of_medians = np.median(medians)
         mean_absolute_deviation = abs(medians - median_of_medians)
         # TODO : Make threshold dynamic
@@ -173,14 +204,28 @@ if __name__ == "__main__":
         upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
         lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
         # add here the explanation of the results
-        example_index = upper_outlying_indices[4]
+        example_index = upper_outlying_indices[0]
         example_median = medians[example_index]
         # For now assume that the count is odd such that the median is one of them
-        # TODO: Assume the second case late
-        alpha = matrices_packet[0][:][(score_matrix[:, example_index] == example_median).nonzero()[0]]
-        beta = matrices_packet[1][:][(score_matrix[:, example_index] == example_median).nonzero()[0]]
-        gamma = matrices_packet[2][:][(score_matrix[:, example_index] == example_median).nonzero()[0]]
-        print("    ")
+        # TODO: Assume the second case later
+
+        alpha = matrices_packet[0][:][example_index]
+        beta = matrices_packet[1][:][example_index]
+        gamma = matrices_packet[2][:][example_index]
+        # HERE CHANGE FOR THE SECOND CASE IF IT IS CLOSER
+        target_median_index = np.argwhere((alpha * (1 / beta) * (1 / gamma)) == example_median)[0][1]
+        specific_alpha = alpha[0][target_median_index]
+        specific_beta = beta[0][target_median_index]
+        specific_gamma = gamma[0][target_median_index]
+
+        # Here start doing the partial derivative
+
+        partial_a, partial_b, partial_c = partial_derivative(oddCase=True, alpha_list=[specific_alpha],
+                                                             beta_list=[specific_beta],
+                                                             gamma_list=[specific_gamma])
+        print("123")
+
+        index_of_median_of_medians = np.argwhere(median_of_medians == medians)[0][0]
 
         if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
             print("NOTHING TO REPORT")
