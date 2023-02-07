@@ -124,19 +124,19 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
                 masses_multiplication = leaves[i].data.shape[0] * leaves[j].data.shape[0]
                 matrix[0][i][j] = masses_multiplication
 
-        distance_squared = ((distance_matrix[i][j]) ** 2)
-        matrix[1][i][j] = distance_squared
+            distance_squared = ((distance_matrix[i][j]) ** 2)
+            matrix[1][i][j] = distance_squared
 
-        masses_difference = abs(leaves[i].data.shape[0] - leaves[j].data.shape[0]) + 1
-        matrix[2][i][j] = masses_difference
+            masses_difference = abs(leaves[i].data.shape[0] - leaves[j].data.shape[0]) + 1
+            matrix[2][i][j] = masses_difference
 
-        outcome = np.divide(matrix[0], matrix[1], out=np.zeros_like(matrix[0]), where=matrix[1] != 0)
-        outcome2 = np.divide(outcome, matrix[2], out=np.zeros_like(outcome), where=matrix[2] != 0)
-        matrix[3] = outcome2 + outcome2.T
-        matrix[2] = matrix[2] + matrix[2].T
-        matrix[1] = matrix[1] + matrix[1].T
-        matrix[0] = matrix[0] + matrix[0].T
-        return matrix
+    outcome = np.divide(matrix[0], matrix[1], out=np.zeros_like(matrix[0]), where=matrix[1] != 0)
+    outcome2 = np.divide(outcome, matrix[2], out=np.zeros_like(outcome), where=matrix[2] != 0)
+    matrix[3] = outcome2 + outcome2.T
+    matrix[2] = matrix[2] + matrix[2].T
+    matrix[1] = matrix[1] + matrix[1].T
+    matrix[0] = matrix[0] + matrix[0].T
+    return matrix
 
 
 def calculate_upper_lower_outliers():
