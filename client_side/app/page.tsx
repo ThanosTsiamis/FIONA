@@ -1,4 +1,5 @@
 import styles from '../styles/Home.module.css'
+import axios from "axios";
 
 export default function HomePage(this: any) {
     return (
@@ -18,22 +19,4 @@ export default function HomePage(this: any) {
 
     )
 }
-let uploadFile;
-uploadFile = async (e: { target: { files: any[]; }; }) => {
-    const file = e.target.files[0];
-    if (file != null) {
-        const data = new FormData();
-        data.append('file_from_react', file);
 
-        let response = await fetch('/upload_file',
-            {
-                method: 'post',
-                body: data,
-            }
-        );
-        let res = await response.json();
-        if (res.status !== 1) {
-            alert('Error uploading file');
-        }
-    }
-};

@@ -121,7 +121,7 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
             if i == j:
                 matrix[0][i][j] = 0
             else:
-                masses_multiplication = leaves[i].data.shape[0] * leaves[j].data.shape[0]
+                masses_multiplication = (leaves[i].data.shape[0] * leaves[j].data.shape[0]) - 1
                 matrix[0][i][j] = masses_multiplication
 
             distance_squared = ((distance_matrix[i][j]) ** 2)
@@ -155,6 +155,7 @@ def upload_file():
     return "done"
 
 
+# TODO: Fix here not completely correct check notes
 def partial_derivative(oddCase: bool, alpha_list: list, beta_list: list, gamma_list: list):
     if oddCase:
         alpha_partial_derivative = (1 / beta_list[0]) * (1 / gamma_list[0])
@@ -183,7 +184,7 @@ def get_index_of_median(odd_number_of_elements: bool, input_list: np.ndarray, me
 
 
 if __name__ == "__main__":
-    # app.run(debug=False)
+    # app.run(host="0.0.0.0",debug=False)
     dataframe = read_data("resources/datasets/testing.csv")
     graph = nx.Graph()
     for column in dataframe.columns:
@@ -204,28 +205,30 @@ if __name__ == "__main__":
         upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
         lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
         # add here the explanation of the results
-        example_index = upper_outlying_indices[0]
-        example_median = medians[example_index]
-        # For now assume that the count is odd such that the median is one of them
-        # TODO: Assume the second case later
+        for index in upper_outlying_indices:
+            # TODO: Change it to index later
+            example_index = upper_outlying_indices[0]
+            example_median = medians[example_index]
+            # For now assume that the count is odd such that the median is one of them
+            # TODO: Assume the second case later
 
-        alpha = matrices_packet[0][:][example_index]
-        beta = matrices_packet[1][:][example_index]
-        gamma = matrices_packet[2][:][example_index]
-        # HERE CHANGE FOR THE SECOND CASE IF IT IS CLOSER
-        target_median_index = np.argwhere((alpha * (1 / beta) * (1 / gamma)) == example_median)[0][1]
-        specific_alpha = alpha[0][target_median_index]
-        specific_beta = beta[0][target_median_index]
-        specific_gamma = gamma[0][target_median_index]
+            alpha = matrices_packet[0][:][example_index]
+            beta = matrices_packet[1][:][example_index]
+            gamma = matrices_packet[2][:][example_index]
+            # HERE CHANGE FOR THE SECOND CASE IF IT IS CLOSER
+            target_median_index = np.argwhere((alpha * (1 / beta) * (1 / gamma)) == example_median)[0][1]
+            specific_alpha = alpha[0][target_median_index]
+            specific_beta = beta[0][target_median_index]
+            specific_gamma = gamma[0][target_median_index]
 
-        # Here start doing the partial derivative
+            # Here start doing the partial derivative
 
-        partial_a, partial_b, partial_c = partial_derivative(oddCase=True, alpha_list=[specific_alpha],
-                                                             beta_list=[specific_beta],
-                                                             gamma_list=[specific_gamma])
-        print("123")
+            partial_a, partial_b, partial_c = partial_derivative(oddCase=True, alpha_list=[specific_alpha],
+                                                                 beta_list=[specific_beta],
+                                                                 gamma_list=[specific_gamma])
+            print("123")
 
-        index_of_median_of_medians = np.argwhere(median_of_medians == medians)[0][0]
+            index_of_median_of_medians = np.argwhere(median_of_medians == medians)[0][0]
 
         if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
             print("NOTHING TO REPORT")
