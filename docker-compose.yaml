@@ -1,4 +1,7 @@
 version: '3.7'
+networks:
+  app-network:
+    external: false
 
 services:
   api:
@@ -8,9 +11,11 @@ services:
     volumes:
       - './api:/usr/src/app'
     ports:
-      - "5000:5000"
+      - "5002:5000"
     environment:
       - FLASK_CONFIG=development
+    networks:
+      - app-network
 
   nginx:
     build:
@@ -20,8 +25,11 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      #      - api
+      - api
       - client
+    networks:
+      - app-network
+
 
   client:
     build:
@@ -36,5 +44,7 @@ services:
       - NODE_ENV=development
       - REACT_APP_SERVICE_URL=http://localhost:8080
       - CHOKIDAR_USEPOLLING=true
-#    depends_on:
-#      - api
+    depends_on:
+      - api
+    networks:
+      - app-network

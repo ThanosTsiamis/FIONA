@@ -184,7 +184,7 @@ def get_index_of_median(odd_number_of_elements: bool, input_list: np.ndarray, me
 
 
 if __name__ == "__main__":
-    # app.run(host="0.0.0.0",debug=False)
+    app.run(host="0.0.0.0",debug=False)
     dataframe = read_data("resources/datasets/testing.csv")
     graph = nx.Graph()
     for column in dataframe.columns:
