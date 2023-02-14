@@ -54,6 +54,12 @@ def unique_array_fixed(uniqued_array: numpy.ndarray):
 
 
 def feature_to_split_on(specificity_level, df):
+    """
+
+    :param specificity_level:
+    :param df:
+    :return:
+    """
     if specificity_level == -2:
         # TODO : FIX HERE
         res = [i for n, i in enumerate(df[:, 1]) if i not in df[:, 1][:n]]
@@ -67,7 +73,14 @@ def feature_to_split_on(specificity_level, df):
         return set(gen(df[:, 0], specificity_level))
 
 
-def tree_grow(column, nDistinctMin=2):
+def tree_grow(column: pd.DataFrame, nDistinctMin=2):
+    """
+
+    :param column: An attribute of the database in Pandas Dataframe format upon which to build the tree
+    :param nDistinctMin: A pruning parameter which stops the current branch if less than n distinct values in the node
+    are found
+    :return: the root of the tree
+    """
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     while node_list:
@@ -103,7 +116,9 @@ def node_distance(node1: Node, node2: Node):
 
 def create_distance_matrix(leaves: tuple):
     matrix = np.empty([len(leaves), len(leaves)])
+    matrix.fill(0)
     for first_index in range(len(leaves)):
+        row = []
         for second_index in range(first_index, len(leaves)):
             if first_index == second_index:
                 matrix[first_index][second_index] = 0
@@ -116,12 +131,13 @@ def create_distance_matrix(leaves: tuple):
 def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
     # Order is depth,height,width
     matrix = np.empty([4, len(leaves), len(leaves)])
+    matrix.fill(0)
     for i in range(len(distance_matrix)):
         for j in range(i, len(distance_matrix[0])):
             if i == j:
                 matrix[0][i][j] = 0
             else:
-                masses_multiplication = (leaves[i].data.shape[0] * leaves[j].data.shape[0]) - 1
+                masses_multiplication = (leaves[i].data.shape[0] * leaves[j].data.shape[0])
                 matrix[0][i][j] = masses_multiplication
 
             distance_squared = ((distance_matrix[i][j]) ** 2)
@@ -148,7 +164,7 @@ def hello():
     return "<p>Hello, World!</p>"
 
 
-@app.route('/upload_file', methods=['POST'])
+@app.route('/upload', methods=['POST'])
 def upload_file():
     file = request.files['file']
     print(file)
@@ -184,8 +200,8 @@ def get_index_of_median(odd_number_of_elements: bool, input_list: np.ndarray, me
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0",debug=False)
-    dataframe = read_data("resources/datasets/testing.csv")
+    # app.run(host="0.0.0.0",debug=False)
+    dataframe = read_data("../resources/datasets/adult.csv")
     graph = nx.Graph()
     for column in dataframe.columns:
         # column="short_name"
@@ -205,30 +221,26 @@ if __name__ == "__main__":
         upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
         lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
         # add here the explanation of the results
-        for index in upper_outlying_indices:
-            # TODO: Change it to index later
-            example_index = upper_outlying_indices[0]
-            example_median = medians[example_index]
-            # For now assume that the count is odd such that the median is one of them
-            # TODO: Assume the second case later
 
-            alpha = matrices_packet[0][:][example_index]
-            beta = matrices_packet[1][:][example_index]
-            gamma = matrices_packet[2][:][example_index]
-            # HERE CHANGE FOR THE SECOND CASE IF IT IS CLOSER
-            target_median_index = np.argwhere((alpha * (1 / beta) * (1 / gamma)) == example_median)[0][1]
-            specific_alpha = alpha[0][target_median_index]
-            specific_beta = beta[0][target_median_index]
-            specific_gamma = gamma[0][target_median_index]
+        for index in upper_outlying_indices:
+            median = medians[index]
+            alpha = matrices_packet[0][:][index]
+            beta = matrices_packet[1][:][index]
+            gamma = matrices_packet[2][:][index]
+            score = score_matrix[index]
+            dif = abs(score - median)
+            indices_of_median = np.where(dif == dif.min())[1]
+
+            specific_alphas = alpha[0][indices_of_median]
+            specific_betas = beta[0][indices_of_median]
+            specific_gammas = gamma[0][indices_of_median]
 
             # Here start doing the partial derivative
-
-            partial_a, partial_b, partial_c = partial_derivative(oddCase=True, alpha_list=[specific_alpha],
-                                                                 beta_list=[specific_beta],
-                                                                 gamma_list=[specific_gamma])
+            # TODO fix the partial derivative
+            partial_a, partial_b, partial_c = partial_derivative(oddCase=True, alpha_list=specific_alpha,
+                                                                 beta_list=specific_beta,
+                                                                 gamma_list=specific_gamma)
             print("123")
-
-            index_of_median_of_medians = np.argwhere(median_of_medians == medians)[0][0]
 
         if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
             print("NOTHING TO REPORT")
