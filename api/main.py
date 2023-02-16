@@ -201,10 +201,10 @@ def get_index_of_median(odd_number_of_elements: bool, input_list: np.ndarray, me
 
 if __name__ == "__main__":
     # app.run(host="0.0.0.0",debug=False)
-    dataframe = read_data("../resources/datasets/adult.csv")
+    dataframe = read_data("../resources/datasets/10492-1.csv")
     graph = nx.Graph()
     for column in dataframe.columns:
-        # column="short_name"
+        column = "Account Name"
         attribute = process_data(pd.DataFrame(dataframe[column]))
         root = tree_grow(attribute)
         leaves = root.leaves
@@ -213,13 +213,29 @@ if __name__ == "__main__":
         matrices_packet = score_function(leaves, distance_matrix)
         score_matrix = matrices_packet[3]
         medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
-        # Median of medians may not be a value of the vector but it may be in between.
         median_of_medians = np.median(medians)
+        difference = abs(medians - median_of_medians)
+        median_list = np.where(difference == difference.min())[0]
         mean_absolute_deviation = abs(medians - median_of_medians)
         # TODO : Make threshold dynamic
-        threshold = 0.4826
-        upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
-        lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
+        threshold_values = np.linspace(0.20, 0.80, 120)
+        previous_values = [-1, -1]
+        upper_outlying_indices_dict = {}
+        lower_outlying_indices_dict = {}
+        for threshold in threshold_values:
+            upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
+            lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
+            if upper_outlying_indices.shape[0] == previous_values[0] and lower_outlying_indices.shape[0] == \
+                    previous_values[1]:
+                continue
+            else:
+                previous_values[0] = upper_outlying_indices.shape[0]
+                previous_values[1] = lower_outlying_indices.shape[0]
+                upper_outlying_indices_dict[threshold] = upper_outlying_indices
+                lower_outlying_indices_dict[threshold] = lower_outlying_indices
+        # threshold = 0.7826
+        # upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
+        # lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
         # add here the explanation of the results
 
         for index in upper_outlying_indices:
@@ -237,19 +253,19 @@ if __name__ == "__main__":
 
             # Here start doing the partial derivative
             # TODO fix the partial derivative
-            partial_a, partial_b, partial_c = partial_derivative(oddCase=True, alpha_list=specific_alpha,
-                                                                 beta_list=specific_beta,
-                                                                 gamma_list=specific_gamma)
-            print("123")
+            partial_a, partial_b, partial_c = partial_derivative(oddCase=True, alpha_list=specific_alphas,
+                                                                 beta_list=specific_betas,
+                                                                 gamma_list=specific_gammas)
+        print(" ")
 
         if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
-            print("NOTHING TO REPORT")
+            print("NOTHING TO REPORT for the column " + column)
         else:
             print("Report outliers for the column " + column)
             for i in upper_outlying_indices:
-                element, count = np.unique(leaves[i.item].data[:, 0], return_counts=True)
+                element, count = np.unique(leaves[i[0]].data[:, 0], return_counts=True)
                 print(str(element) + " appears " + str(count) + " times")
             for j in lower_outlying_indices:
-                element, count = np.unique(leaves[j.item].data[:, 0], return_counts=True)
+                element, count = np.unique(leaves[j[0]].data[:, 0], return_counts=True)
                 print(str(element) + " appears " + str(count) + " times")
     print('')
