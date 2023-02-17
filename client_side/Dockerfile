@@ -8,5 +8,5 @@ COPY package.json /usr/src/app/package.json
 
 RUN npm install
 
-EXPOSE 3000
+EXPOSE 3008
 CMD ["npm", "run", "dev"]
