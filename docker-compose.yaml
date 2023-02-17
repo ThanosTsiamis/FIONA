@@ -1,0 +1,50 @@
+version: '3.7'
+networks:
+  app-network:
+    external: false
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    volumes:
+      - './api:/usr/src/app'
+    ports:
+      - "5002:5000"
+    environment:
+      - FLASK_CONFIG=development
+    networks:
+      - app-network
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+      - client
+    networks:
+      - app-network
+
+
+  client:
+    build:
+      context: ./client_side
+      dockerfile: Dockerfile
+    volumes:
+      - './client_side:/usr/src/app'
+      - '/usr/src/app/node_modules'
+    ports:
+      - "3008:3000"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_SERVICE_URL=http://localhost:8080
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - api
+    networks:
+      - app-network
