@@ -1,7 +1,6 @@
 import random
 
 import anytree.util
-import networkx as nx
 import numpy
 import numpy as np
 import pandas as pd
@@ -75,7 +74,6 @@ def feature_to_split_on(specificity_level, df):
 
 def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     """
-
     :param column: An attribute of the database in Pandas Dataframe format upon which to build the tree
     :param nDistinctMin: A pruning parameter which stops the current branch if less than n distinct values in the node
     are found
@@ -102,7 +100,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                 gen = np.vectorize(generalise_string, excluded=['specificity_level'])
                 positions = np.nonzero(np.isin(gen(current_node.data[:, 0], current_node.specificity_level), item))
             data_for_child = current_node.data[positions[0]]
-            child = Node(current_node.name + str(random.random), parent=current_node, data=data_for_child,
+            child = Node(str(random.random), parent=current_node, data=data_for_child,
                          specificity_level=current_node.specificity_level + 1)
             child_list.append(child)
             node_list.append(child)
@@ -118,7 +116,6 @@ def create_distance_matrix(leaves: tuple):
     matrix = np.empty([len(leaves), len(leaves)])
     matrix.fill(0)
     for first_index in range(len(leaves)):
-        row = []
         for second_index in range(first_index, len(leaves)):
             if first_index == second_index:
                 matrix[first_index][second_index] = 0
@@ -155,20 +152,17 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
     return matrix
 
 
-def calculate_upper_lower_outliers():
-    pass
-
-
 @app.route('/')
 def hello():
     return "<p>Hello, World!</p>"
 
 
-@app.route('/upload', methods=['POST'])
+@app.route('/api/upload', methods=['POST'])
 def upload_file():
-    file = request.files['file']
-    print(file)
-    return "done"
+    if request.method == 'POST':
+        f = request.files['file']
+        f.save(f.filename)
+        return "<p> OKOKOK </p>"
 
 
 # TODO: Fix here not completely correct check notes
@@ -186,29 +180,15 @@ def partial_derivative(oddCase: bool, alpha_list: list, beta_list: list, gamma_l
     return alpha_partial_derivative, beta_partial_derivative, gamma_partial_derivative
 
 
-def get_index_of_median(odd_number_of_elements: bool, input_list: np.ndarray, median):
-    if odd_number_of_elements:
-        # the median is one of the elements
-        return np.argwhere(input_list == median)
-    else:
-        # find the element closest to the median and take its symmetric based on the median
-        # consider the distance of the first element to be the smallest
-        min_dif = abs(input_list - median)
-        bottom_index = np.argmin(min_dif)
-        top_index = np.argwhere(input_list == (min_dif + input_list[bottom_index]))
-        return bottom_index, top_index
-
-
 if __name__ == "__main__":
-    # app.run(host="0.0.0.0",debug=False)
-    dataframe = read_data("../resources/datasets/10492-1.csv")
-    graph = nx.Graph()
+    # app.run(host="0.0.0.0", debug=False)
+    dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
     for column in dataframe.columns:
-        column = "Account Name"
+        # column = "Account Name"
         attribute = process_data(pd.DataFrame(dataframe[column]))
         root = tree_grow(attribute)
         leaves = root.leaves
-        graph.add_nodes_from(leaves)
+        # graph.add_nodes_from(leaves)
         distance_matrix = create_distance_matrix(leaves)
         matrices_packet = score_function(leaves, distance_matrix)
         score_matrix = matrices_packet[3]
@@ -218,7 +198,7 @@ if __name__ == "__main__":
         median_list = np.where(difference == difference.min())[0]
         mean_absolute_deviation = abs(medians - median_of_medians)
         # TODO : Make threshold dynamic
-        threshold_values = np.linspace(0.20, 0.80, 120)
+        threshold_values = np.linspace(0.20, 1, 120)
         previous_values = [-1, -1]
         upper_outlying_indices_dict = {}
         lower_outlying_indices_dict = {}
@@ -233,9 +213,7 @@ if __name__ == "__main__":
                 previous_values[1] = lower_outlying_indices.shape[0]
                 upper_outlying_indices_dict[threshold] = upper_outlying_indices
                 lower_outlying_indices_dict[threshold] = lower_outlying_indices
-        # threshold = 0.7826
-        # upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
-        # lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
+
         # add here the explanation of the results
 
         for index in upper_outlying_indices:
