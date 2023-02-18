@@ -7,7 +7,7 @@ import pandas as pd
 from anytree import *
 from flask import Flask, request
 
-app = Flask("test")
+app = Flask("FRIEND")
 
 
 def read_data(filename):
@@ -43,21 +43,13 @@ def find_unique_elements(generalised_string):
     return set(generalised_string)
 
 
-def unique_array_fixed(uniqued_array: numpy.ndarray):
-    # TODO: Find why do we have to use that here instead of actual unique
-    next_unique = np.unique(uniqued_array)
-    while next_unique.size != uniqued_array.size:
-        uniqued_array = next_unique
-        next_unique = np.unique(next_unique)
-    return uniqued_array
-
-
 def feature_to_split_on(specificity_level, df):
     """
 
-    :param specificity_level:
-    :param df:
-    :return:
+    :param specificity_level: Specificity level corresponds to the depth of the tree. Based on the depth of the tree
+    different kind of splits are done.
+    :param df: The dataframe to be split into sub-dataframes.
+    :return: The set of the distinct possible options on which the root algorithm will split upon.
     """
     if specificity_level == -2:
         # TODO : FIX HERE
@@ -74,6 +66,9 @@ def feature_to_split_on(specificity_level, df):
 
 def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     """
+        The tree grow algorithm. It works by adding nodes in the list and popping the head each time in order to split
+        it. Initially the tree contains only the root. The split doesn't happen if the unique elements inside the node
+        are less than nDistinctMin parameter and the specificity level (i.e. depth+2) is more than 0.
     :param column: An attribute of the database in Pandas Dataframe format upon which to build the tree
     :param nDistinctMin: A pruning parameter which stops the current branch if less than n distinct values in the node
     are found
@@ -113,6 +108,12 @@ def node_distance(node1: Node, node2: Node):
 
 
 def create_distance_matrix(leaves: tuple):
+    """
+        Creates the distance matrix which contains the distances of each pair of leaves. Distance matrix is symmetric,
+        which means that matrix[i][j]==matrix[j][i].
+    :param leaves: The leaves created by the tree.
+    :return: The distance matrix
+    """
     matrix = np.empty([len(leaves), len(leaves)])
     matrix.fill(0)
     for first_index in range(len(leaves)):
@@ -126,6 +127,17 @@ def create_distance_matrix(leaves: tuple):
 
 
 def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
+    """
+        Computes a score for each pair of leaves. Score function depends on three quantities:
+        (i): The product of elements in each leaf (i.e. masses multiplication)
+        (ii): The square of distance of the leaves in the tree.
+        (iii): The absolute value of the difference of the elements of the pair of leaves.
+        Each quantity is stored in a different matrix in the same position and the tree quantites are multiplied in the
+        end creating the score matrix function.
+    :param leaves:
+    :param distance_matrix:
+    :return:
+    """
     # Order is depth,height,width
     matrix = np.empty([4, len(leaves), len(leaves)])
     matrix.fill(0)
@@ -181,7 +193,7 @@ def partial_derivative(oddCase: bool, alpha_list: list, beta_list: list, gamma_l
 
 
 if __name__ == "__main__":
-    # app.run(host="0.0.0.0", debug=False)
+    app.run(host="0.0.0.0", debug=False)
     dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
     for column in dataframe.columns:
         # column = "Account Name"
