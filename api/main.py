@@ -1,6 +1,5 @@
 import random
 
-import anytree.util
 import numpy
 import numpy as np
 import pandas as pd
@@ -14,6 +13,7 @@ def read_data(filename):
     return pd.read_csv(filename, dtype=str)
 
 
+# TODO: Fix here the problem with generalised unique elements
 def process_data(dataframe: pd.DataFrame):
     dataframe = dataframe.fillna('')
     dataframe['GeneralisedUniqueElements'] = dataframe.applymap(generalise_string).applymap(find_unique_elements)
@@ -43,6 +43,10 @@ def find_unique_elements(generalised_string):
     return set(generalised_string)
 
 
+def character_split(character_mark):
+    pass
+
+
 def feature_to_split_on(specificity_level, df):
     """
 
@@ -60,8 +64,10 @@ def feature_to_split_on(specificity_level, df):
         result = set(length(df)[:, 0])
         return result
     else:
-        gen = np.vectorize(generalise_string, excluded=['specificity_level'])
-        return set(gen(df[:, 0], specificity_level))
+        # add here the new function
+        character_split = lambda x: x[:specificity_level + 1]
+        word_split = np.vectorize(character_split)
+        return set(word_split(df[:, 0]))
 
 
 def tree_grow(column: pd.DataFrame, nDistinctMin=2):
@@ -92,9 +98,9 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                 length = np.vectorize(len)
                 positions = np.nonzero(np.isin(length(current_node.data[:, 0]), item))
             else:
-                gen = np.vectorize(generalise_string, excluded=['specificity_level'])
-                positions = np.nonzero(np.isin(gen(current_node.data[:, 0], current_node.specificity_level), item))
-            data_for_child = current_node.data[positions[0]]
+                # gen = np.vectorize(generalise_string, excluded=['specificity_level'])
+                positions = [i for i, si in enumerate(current_node.data[:, 0]) if si.startswith(item)]
+            data_for_child = current_node.data[positions]
             child = Node(str(random.random), parent=current_node, data=data_for_child,
                          specificity_level=current_node.specificity_level + 1)
             child_list.append(child)
@@ -104,7 +110,12 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
 
 
 def node_distance(node1: Node, node2: Node):
-    return (node1.depth + node2.depth) - 2 * anytree.util.commonancestors(node1, node2)[-1].depth
+    # Go by specificity level. Save a lot of time this way
+    walker = Walker()
+    distance = walker.walk(node1, node2)
+    upwards = len(distance[0])
+    downwards = len(distance[2])
+    return upwards + downwards
 
 
 def create_distance_matrix(leaves: tuple):
@@ -114,7 +125,7 @@ def create_distance_matrix(leaves: tuple):
     :param leaves: The leaves created by the tree.
     :return: The distance matrix
     """
-    matrix = np.empty([len(leaves), len(leaves)])
+    matrix = np.empty([len(leaves), len(leaves)], dtype='uint8')
     matrix.fill(0)
     for first_index in range(len(leaves)):
         for second_index in range(first_index, len(leaves)):
@@ -139,7 +150,7 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
     :return:
     """
     # Order is depth,height,width
-    matrix = np.empty([4, len(leaves), len(leaves)])
+    matrix = np.empty([4, len(leaves), len(leaves)], dtype='uint8')
     matrix.fill(0)
     for i in range(len(distance_matrix)):
         for j in range(i, len(distance_matrix[0])):
@@ -174,6 +185,7 @@ def upload_file():
     if request.method == 'POST':
         f = request.files['file']
         f.save(f.filename)
+        process(file=f)
         return "<p> OKOKOK </p>"
 
 
@@ -192,9 +204,10 @@ def partial_derivative(oddCase: bool, alpha_list: list, beta_list: list, gamma_l
     return alpha_partial_derivative, beta_partial_derivative, gamma_partial_derivative
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=False)
-    dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
+def process(file):
+    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/AERS.csv")
+    dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing.csv")
+    # dataframe = read_data(file.filename)
     for column in dataframe.columns:
         # column = "Account Name"
         attribute = process_data(pd.DataFrame(dataframe[column]))
@@ -227,7 +240,7 @@ if __name__ == "__main__":
                 lower_outlying_indices_dict[threshold] = lower_outlying_indices
 
         # add here the explanation of the results
-
+        # TODO: fix here and put dict
         for index in upper_outlying_indices:
             median = medians[index]
             alpha = matrices_packet[0][:][index]
@@ -247,7 +260,7 @@ if __name__ == "__main__":
                                                                  beta_list=specific_betas,
                                                                  gamma_list=specific_gammas)
         print(" ")
-
+        # return jsonify(upper_outlying_indices_dict,lower_outlying_indices_dict)
         if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
             print("NOTHING TO REPORT for the column " + column)
         else:
@@ -259,3 +272,9 @@ if __name__ == "__main__":
                 element, count = np.unique(leaves[j[0]].data[:, 0], return_counts=True)
                 print(str(element) + " appears " + str(count) + " times")
     print('')
+
+
+if __name__ == "__main__":
+    # app.run(host="0.0.0.0", debug=False)
+    file = "123123"
+    process(file=file)

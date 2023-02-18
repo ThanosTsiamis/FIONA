@@ -1,39 +1,109 @@
-import type { NextPage } from "next";
-import Head from "next/head";
+import type {NextPage} from "next";
+import Image from "next/image";
+import Papa from "papaparse";
+import {useState} from "react";
 
 const Home: NextPage = () => {
-  return (
-    <div>
-      <Head>
-        <title>File uploader</title>
-        <meta name="description" content="File uploader" />
-      </Head>
 
-      <main className="py-10">
-        <div className="w-full max-w-3xl px-3 mx-auto">
-          <h1 className="mb-10 text-3xl font-bold text-gray-900">
-            Upload your files
-          </h1>
 
-          <div className="space-y-10">
-            <div>
-              <form action="http://localhost:5000/api/upload" method="POST"
-                    encType="multipart/form-data">
-                <input type="file" name="file"/>
-                <input type="submit"/>
-              </form>
-            </div>
-          </div>
+    // State to store parsed data
+    const [parsedData, setParsedData] = useState([]);
+
+    //State to store table Column name
+    const [tableRows, setTableRows] = useState([]);
+
+    //State to store the values
+    const [values, setValues] = useState([]);
+
+    const changeHandler = (event) => {
+        // Passing file data (event.target.files[0]) to parse using Papa.parse
+        Papa.parse(event.target.files[0], {
+            header: true,
+            skipEmptyLines: true,
+            complete: function (results) {
+                const rowsArray = [];
+                const valuesArray = [];
+
+                // Iterating data to get column name and their values
+                results.data.map((d) => {
+                    rowsArray.push(Object.keys(d));
+                    valuesArray.push(Object.values(d));
+                });
+
+                // Parsed Data Response in array format
+                setParsedData(results.data);
+
+                // Filtered Column Names
+                setTableRows(rowsArray[0]);
+
+                // Filtered Values
+                setValues(valuesArray);
+            },
+        });
+    };
+    return (
+        <div>
+            <h1 className="mb-4 ml-10 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-1xl lg:text-5xl dark:text-white">Outlier
+                Detector</h1>
+            <p className="mb-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">Discover
+                hidden insights and unlock the true potential of your data with our cutting-edge categorical outlier
+                detection technology.</p>
+
+
+            <main className="py-10">
+                <div className="w-full max-w-3xl px-3 mx-auto">
+                    <h1 className="mb-10 text-3xl font-bold text-gray-900">
+                        Upload your files
+                    </h1>
+
+                    <div className="space-y-10">
+                        <div>
+                            <form action="http://localhost:5000/api/upload" method="POST"
+                                  encType="multipart/form-data">
+                                <input type="file" name="file" onChange={changeHandler}/>
+                                <button
+                                    className={"bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"}
+                                    type="submit">Submit file
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <table>
+                <thead>
+                <tr>
+                    {tableRows.map((rows, index) => {
+                        return <th key={index}>{rows}</th>;
+                    })}
+                </tr>
+                </thead>
+                <tbody>
+                {values.map((value, index) => {
+                    return (
+                        <tr key={index}>
+                            {value.map((val, i) => {
+                                return <td key={i}>{val}</td>;
+                            })}
+                        </tr>
+                    );
+                })}
+                </tbody>
+            </table>
+
+            <footer className="fixed inset-x-0 bottom-0">
+                <div className="sm:items-center sm:justify-between">
+                    <a href="https://www.uu.nl/en/" className="flex items-center mb-4 sm:mb-0">
+                        <Image src="/UU_logo_2021_EN_RGB.png"
+                               alt="Utrecht University Logo" width="158" height={64}/>
+                        <span
+                            className="self-center text-base whitespace-nowrap dark:text-white">Utrecht University</span>
+                    </a>
+                </div>
+
+            </footer>
         </div>
-      </main>
-
-      <footer>
-        <div className="w-full max-w-3xl px-3 mx-auto">
-          <p>All right reserved</p>
-        </div>
-      </footer>
-    </div>
-  );
+    );
 };
 
 export default Home;
