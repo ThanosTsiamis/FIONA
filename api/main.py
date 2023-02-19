@@ -98,7 +98,6 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                 length = np.vectorize(len)
                 positions = np.nonzero(np.isin(length(current_node.data[:, 0]), item))
             else:
-                # gen = np.vectorize(generalise_string, excluded=['specificity_level'])
                 positions = [i for i, si in enumerate(current_node.data[:, 0]) if si.startswith(item)]
             data_for_child = current_node.data[positions]
             child = Node(str(random.random), parent=current_node, data=data_for_child,
@@ -110,12 +109,22 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
 
 
 def node_distance(node1: Node, node2: Node):
-    # Go by specificity level. Save a lot of time this way
-    walker = Walker()
-    distance = walker.walk(node1, node2)
-    upwards = len(distance[0])
-    downwards = len(distance[2])
-    return upwards + downwards
+    sameClass = node1.data[:, 1][0] == node2.data[:, 1][0]
+    sameLength = len(node1.data[:, 0][0]) == len(node2.data[:, 0][0])
+    if sameClass:
+        if sameLength:
+            for char_pos in range(len(node1.data[:, 0][0])):
+                if node1.data[:, 0][0][char_pos] == node2.data[:, 0][char_pos]:
+                    continue
+                else:
+                    break
+            return node1.specificity_level + node2.specificity_level - 2 * char_pos
+        else:
+            # add the specificity levels  +2
+            return node1.specificity_level + node2.specificity_level + 2
+    else:
+        # add the specificity levels with  +4
+        return node1.specificity_level + node2.specificity_level + 4
 
 
 def create_distance_matrix(leaves: tuple):
@@ -143,7 +152,7 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
         (i): The product of elements in each leaf (i.e. masses multiplication)
         (ii): The square of distance of the leaves in the tree.
         (iii): The absolute value of the difference of the elements of the pair of leaves.
-        Each quantity is stored in a different matrix in the same position and the tree quantites are multiplied in the
+        Each quantity is stored in a different matrix in the same position and the tree quantities are multiplied in the
         end creating the score matrix function.
     :param leaves:
     :param distance_matrix:
@@ -205,8 +214,8 @@ def partial_derivative(oddCase: bool, alpha_list: list, beta_list: list, gamma_l
 
 
 def process(file):
-    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/AERS.csv")
-    dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing.csv")
+    dataframe = read_data("../resources/datasets/datasets_testing_purposes/AERS.csv")
+    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing.csv")
     # dataframe = read_data(file.filename)
     for column in dataframe.columns:
         # column = "Account Name"
