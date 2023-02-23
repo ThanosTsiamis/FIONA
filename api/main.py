@@ -1,10 +1,11 @@
+import json
 import random
 
 import numpy
 import numpy as np
 import pandas as pd
 from anytree import *
-from flask import Flask, request
+from flask import Flask, request, redirect
 
 app = Flask("FRIEND")
 
@@ -41,10 +42,6 @@ def generalise_string(string: str, specificity_level=0):
 
 def find_unique_elements(generalised_string):
     return set(generalised_string)
-
-
-def character_split(character_mark):
-    pass
 
 
 def feature_to_split_on(specificity_level, df):
@@ -134,7 +131,7 @@ def create_distance_matrix(leaves: tuple):
     :param leaves: The leaves created by the tree.
     :return: The distance matrix
     """
-    matrix = np.empty([len(leaves), len(leaves)], dtype='uint8')
+    matrix = np.empty([len(leaves), len(leaves)], dtype='float64')
     matrix.fill(0)
     for first_index in range(len(leaves)):
         for second_index in range(first_index, len(leaves)):
@@ -159,7 +156,7 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
     :return:
     """
     # Order is depth,height,width
-    matrix = np.empty([4, len(leaves), len(leaves)], dtype='uint8')
+    matrix = np.empty([4, len(leaves), len(leaves)], dtype='float64')
     matrix.fill(0)
     for i in range(len(distance_matrix)):
         for j in range(i, len(distance_matrix[0])):
@@ -184,18 +181,23 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
     return matrix
 
 
-@app.route('/')
-def hello():
-    return "<p>Hello, World!</p>"
-
-
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     if request.method == 'POST':
         f = request.files['file']
         f.save(f.filename)
         process(file=f)
-        return "<p> OKOKOK </p>"
+        outlying_elements = process(file=f)
+        json_serialisation = json.dumps(outlying_elements)
+        with open("../resources/json_dumps/" + f.filename + ".json", "w") as outfile:
+            outfile.write(json_serialisation)
+        redirect("http://localhost:3000/results")
+
+
+@app.route("/api/fetch/<string:filename>", methods=['GET'])
+def fetch(filename):
+    print(filename)
+    return redirect("http://localhost:3000")
 
 
 # TODO: Fix here not completely correct check notes
@@ -214,11 +216,12 @@ def partial_derivative(oddCase: bool, alpha_list: list, beta_list: list, gamma_l
 
 
 def process(file):
-    dataframe = read_data("../resources/datasets/datasets_testing_purposes/AERS.csv")
-    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing.csv")
+    dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
+    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
     # dataframe = read_data(file.filename)
+    output = {}
     for column in dataframe.columns:
-        # column = "Account Name"
+        # column = "School Name"
         attribute = process_data(pd.DataFrame(dataframe[column]))
         root = tree_grow(attribute)
         leaves = root.leaves
@@ -228,15 +231,18 @@ def process(file):
         score_matrix = matrices_packet[3]
         medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
         median_of_medians = np.median(medians)
-        difference = abs(medians - median_of_medians)
-        median_list = np.where(difference == difference.min())[0]
-        mean_absolute_deviation = abs(medians - median_of_medians)
+        # We need those four lines for the explanation of the results
+        # difference = abs(medians - median_of_medians)
+        # median_list = np.where(difference == difference.min())[0]
+        # mean_absolute_deviation = abs(medians - median_of_medians)
+        outlying_elements = {}
         # TODO : Make threshold dynamic
-        threshold_values = np.linspace(0.20, 1, 120)
+        threshold_values = np.linspace(0.20, 2, 450)
         previous_values = [-1, -1]
         upper_outlying_indices_dict = {}
         lower_outlying_indices_dict = {}
         for threshold in threshold_values:
+            element_dict = {}
             upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
             lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
             if upper_outlying_indices.shape[0] == previous_values[0] and lower_outlying_indices.shape[0] == \
@@ -247,43 +253,54 @@ def process(file):
                 previous_values[1] = lower_outlying_indices.shape[0]
                 upper_outlying_indices_dict[threshold] = upper_outlying_indices
                 lower_outlying_indices_dict[threshold] = lower_outlying_indices
+                for i in upper_outlying_indices:
+                    element_dict[leaves[i[0]].data[:, 0][0]] = leaves[i[0]].data.shape[0]
+                for j in lower_outlying_indices:
+                    element_dict[leaves[j[0]].data[:, 0][0]] = leaves[j[0]].data.shape[0]
+                outlying_elements[threshold] = element_dict
+        output[str(column)] = outlying_elements
+        print("123")
 
         # add here the explanation of the results
         # TODO: fix here and put dict
-        for index in upper_outlying_indices:
-            median = medians[index]
-            alpha = matrices_packet[0][:][index]
-            beta = matrices_packet[1][:][index]
-            gamma = matrices_packet[2][:][index]
-            score = score_matrix[index]
-            dif = abs(score - median)
-            indices_of_median = np.where(dif == dif.min())[1]
+        # for index in upper_outlying_indices:
+        #     median = medians[index]
+        #     alpha = matrices_packet[0][:][index]
+        #     beta = matrices_packet[1][:][index]
+        #     gamma = matrices_packet[2][:][index]
+        #     score = score_matrix[index]
+        #     dif = abs(score - median)
+        #     indices_of_median = np.where(dif == dif.min())[1]
+        #
+        #     specific_alphas = alpha[0][indices_of_median]
+        #     specific_betas = beta[0][indices_of_median]
+        #     specific_gammas = gamma[0][indices_of_median]
+        #
+        #     # Here start doing the partial derivative
+        #     # TODO fix the partial derivative
+        #     partial_a, partial_b, partial_c = partial_derivative(oddCase=True, alpha_list=specific_alphas,
+        #                                                          beta_list=specific_betas,
+        #                                                          gamma_list=specific_gammas)
+        # print(" ")
 
-            specific_alphas = alpha[0][indices_of_median]
-            specific_betas = beta[0][indices_of_median]
-            specific_gammas = gamma[0][indices_of_median]
-
-            # Here start doing the partial derivative
-            # TODO fix the partial derivative
-            partial_a, partial_b, partial_c = partial_derivative(oddCase=True, alpha_list=specific_alphas,
-                                                                 beta_list=specific_betas,
-                                                                 gamma_list=specific_gammas)
-        print(" ")
         # return jsonify(upper_outlying_indices_dict,lower_outlying_indices_dict)
-        if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
-            print("NOTHING TO REPORT for the column " + column)
-        else:
-            print("Report outliers for the column " + column)
-            for i in upper_outlying_indices:
-                element, count = np.unique(leaves[i[0]].data[:, 0], return_counts=True)
-                print(str(element) + " appears " + str(count) + " times")
-            for j in lower_outlying_indices:
-                element, count = np.unique(leaves[j[0]].data[:, 0], return_counts=True)
-                print(str(element) + " appears " + str(count) + " times")
-    print('')
+
+        # if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
+        #     print("NOTHING TO REPORT for the column " + column)
+        # else:
+        #     print("Report outliers for the column " + column)
+        #     for i in upper_outlying_indices:
+        #         element, count = np.unique(leaves[i[0]].data[:, 0], return_counts=True)
+        #         print(str(element) + " appears " + str(count) + " times")
+        #     for j in lower_outlying_indices:
+        #         element, count = np.unique(leaves[j[0]].data[:, 0], return_counts=True)
+        #         print(str(element) + " appears " + str(count) + " times")
+    print("123")
+    return output
 
 
 if __name__ == "__main__":
-    # app.run(host="0.0.0.0", debug=False)
+    app.run(host="0.0.0.0", debug=False)
     file = "123123"
-    process(file=file)
+    big_dict = process(file=file)
+    json_serialisation = json.dumps(big_dict)
