@@ -5,7 +5,7 @@ import numpy
 import numpy as np
 import pandas as pd
 from anytree import *
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, jsonify
 
 app = Flask("FRIEND")
 
@@ -74,7 +74,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
         are less than nDistinctMin parameter and the specificity level (i.e. depth+2) is more than 0.
     :param column: An attribute of the database in Pandas Dataframe format upon which to build the tree
     :param nDistinctMin: A pruning parameter which stops the current branch if less than n distinct values in the node
-    are found
+    are found (nDistinctMin doesn't work at a specificity level < 0)
     :return: the root of the tree
     """
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
@@ -173,6 +173,7 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
             matrix[2][i][j] = masses_difference
 
     outcome = np.divide(matrix[0], matrix[1], out=np.zeros_like(matrix[0]), where=matrix[1] != 0)
+    outcome = outcome + outcome.T
     outcome2 = np.divide(outcome, matrix[2], out=np.zeros_like(outcome), where=matrix[2] != 0)
     matrix[3] = outcome2 + outcome2.T
     matrix[2] = matrix[2] + matrix[2].T
@@ -185,20 +186,22 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
 def upload_file():
     if request.method == 'POST':
         f = request.files['file']
-        f.save(f.filename)
-        process(file=f)
+        f.save("../resources/json_dumps/" + f.filename)
         outlying_elements = process(file=f)
         json_serialisation = json.dumps(outlying_elements)
         with open("../resources/json_dumps/" + f.filename + ".json", "w") as outfile:
             outfile.write(json_serialisation)
-        redirect("http://localhost:3000/results")
-
+        redirection =redirect("http://localhost:3000/results")
+        redirection.headers.add('Access-Control-Allow-Origin', '*')
+        return redirection
 
 @app.route("/api/fetch/<string:filename>", methods=['GET'])
 def fetch(filename):
-    print(filename)
-    return redirect("http://localhost:3000")
-
+    with open("../resources/json_dumps/" + filename+".json") as f:
+        data = json.load(f)
+    response = jsonify(data)
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
 
 # TODO: Fix here not completely correct check notes
 def partial_derivative(oddCase: bool, alpha_list: list, beta_list: list, gamma_list: list):
@@ -216,9 +219,9 @@ def partial_derivative(oddCase: bool, alpha_list: list, beta_list: list, gamma_l
 
 
 def process(file):
-    dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
+    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
-    # dataframe = read_data(file.filename)
+    dataframe = read_data("../resources/json_dumps/" + file.filename)
     output = {}
     for column in dataframe.columns:
         # column = "School Name"
@@ -301,6 +304,6 @@ def process(file):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=False)
-    file = "123123"
+    file = "testTestTest"
     big_dict = process(file=file)
     json_serialisation = json.dumps(big_dict)
