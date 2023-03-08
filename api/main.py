@@ -191,17 +191,18 @@ def upload_file():
         json_serialisation = json.dumps(outlying_elements)
         with open("../resources/json_dumps/" + f.filename + ".json", "w") as outfile:
             outfile.write(json_serialisation)
-        redirection =redirect("http://localhost:3000/results")
-        redirection.headers.add('Access-Control-Allow-Origin', '*')
-        return redirection
+        resp = jsonify(success=True)
+        return resp
+
 
 @app.route("/api/fetch/<string:filename>", methods=['GET'])
 def fetch(filename):
-    with open("../resources/json_dumps/" + filename+".json") as f:
+    with open("../resources/json_dumps/" + filename + ".json") as f:
         data = json.load(f)
     response = jsonify(data)
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
+
 
 # TODO: Fix here not completely correct check notes
 def partial_derivative(oddCase: bool, alpha_list: list, beta_list: list, gamma_list: list):
