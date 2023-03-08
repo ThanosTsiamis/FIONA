@@ -7,7 +7,7 @@ import pandas as pd
 from anytree import *
 from flask import Flask, request, redirect, jsonify
 
-app = Flask("FRIEND")
+app = Flask("FIONA")
 
 
 def read_data(filename):

@@ -1,13 +1,11 @@
-import React, {useContext, useEffect, useState} from 'react';
-import {UploadContext} from '../components/UploadContext';
+import React, {useContext, useEffect, useState} from "react";
+import {UploadContext} from "../components/UploadContext";
 
 function ResultsPage() {
     const {filename} = useContext(UploadContext);
-    const [data, setData] = useState<string | null>(null);
+    const [data, setData] = useState<any>(null);
 
     useEffect(() => {
-        console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`")
-        console.log(filename+"~~~~~~~~~~~~~~~~")
         const fetchData = async () => {
             const response = await fetch(`http://localhost:5000/api/fetch/${filename}`);
             const jsonData = await response.json();
@@ -24,7 +22,7 @@ function ResultsPage() {
             {data ? (
                 <div>
                     <h2>Results for {filename}:</h2>
-                    <p>{data}</p>
+                    <pre>{JSON.stringify(data, null, 2)}</pre>
                 </div>
             ) : (
                 <p>Loading...</p>
