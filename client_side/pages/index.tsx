@@ -9,6 +9,7 @@ function FileUploadForm() {
     const fileInput = useRef<HTMLInputElement>(null);
     const router = useRouter();
     const [csvData, setCsvData] = useState<Array<Array<string>>>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleFileChange = () => {
         const file = fileInput.current?.files?.[0];
@@ -34,6 +35,7 @@ function FileUploadForm() {
         formData.append('file', file);
 
         try {
+            setIsLoading(true);
             const res = await fetch('http://localhost:5000/api/upload', {
                 method: 'POST',
                 body: formData,
@@ -48,6 +50,8 @@ function FileUploadForm() {
             }
         } catch (err) {
             console.error(err);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -61,8 +65,21 @@ function FileUploadForm() {
             <form onSubmit={handleSubmit}>
                 <input type="file" ref={fileInput} onChange={handleFileChange}/>
                 <button type="submit"
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">Upload
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
+                        disabled={isLoading}>Upload
                 </button>
+                {isLoading && (
+                    <div className="flex items-center justify-center">
+                        <div
+                            className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+                            role="status">
+    <span
+        className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]"
+    >Loading...</span
+    >
+                        </div>
+                    </div>
+                )}
                 <table>
                     <thead>
                     <tr>
