@@ -24,7 +24,6 @@ function FileUploadForm() {
         });
     };
 
-
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData();
@@ -35,13 +34,18 @@ function FileUploadForm() {
         formData.append('file', file);
 
         try {
-            const res = await fetch('http:localhost:5000/api/upload', {
+            const res = await fetch('http://localhost:5000/api/upload', {
                 method: 'POST',
                 body: formData,
+                redirect: 'follow',
             });
             setFilename(file.name);
-            // Navigate to the results page
-            router.push('/results');
+            if (res.redirected) {
+                router.push(res.url);
+            } else {
+                const data = await res.json();
+
+            }
         } catch (err) {
             console.error(err);
         }
@@ -56,7 +60,9 @@ function FileUploadForm() {
 
             <form onSubmit={handleSubmit}>
                 <input type="file" ref={fileInput} onChange={handleFileChange}/>
-                <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">Upload</button>
+                <button type="submit"
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">Upload
+                </button>
                 <table>
                     <thead>
                     <tr>
