@@ -193,8 +193,9 @@ def upload_file():
         json_serialisation = json.dumps(outlying_elements)
         with open("../resources/json_dumps/" + f.filename + ".json", "w") as outfile:
             outfile.write(json_serialisation)
-        resp = jsonify(success=True)
-        return resp
+        redirection = redirect("http://localhost:3000/results")
+        redirection.headers.add('Access-Control-Allow-Origin', '*')
+        return redirection
 
 
 @app.route("/api/fetch/<string:filename>", methods=['GET'])
