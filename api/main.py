@@ -1,11 +1,13 @@
 import json
 import random
+import time
 
 import numpy
 import numpy as np
 import pandas as pd
 from anytree import *
-from flask import Flask, request, redirect, jsonify
+from flask import Flask, request, jsonify, redirect
+from joblib import Parallel, delayed
 
 app = Flask("FIONA")
 
@@ -219,92 +221,102 @@ def partial_derivative(oddCase: bool, alpha_list: list, beta_list: list, gamma_l
     return alpha_partial_derivative, beta_partial_derivative, gamma_partial_derivative
 
 
+def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
+    column = attribute_to_process
+    attribute = process_data(pd.DataFrame(dataframe[column]))
+    root = tree_grow(attribute)
+    leaves = root.leaves
+    # graph.add_nodes_from(leaves)
+    distance_matrix = create_distance_matrix(leaves)
+    matrices_packet = score_function(leaves, distance_matrix)
+    score_matrix = matrices_packet[3]
+    medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
+    median_of_medians = np.median(medians)
+    # We need those four lines for the explanation of the results
+    # difference = abs(medians - median_of_medians)
+    # median_list = np.where(difference == difference.min())[0]
+    # mean_absolute_deviation = abs(medians - median_of_medians)
+    outlying_elements = {}
+    # TODO : Make threshold dynamic
+    threshold_values = np.linspace(0.0002, 1, 1100)
+    previous_values = [-1, -1]
+    upper_outlying_indices_dict = {}
+    lower_outlying_indices_dict = {}
+    for threshold in threshold_values:
+        element_dict = {}
+        upper_outlying_indices = np.argwhere(medians > (median_of_medians * threshold))
+        lower_outlying_indices = np.argwhere(medians < (median_of_medians * threshold))
+        if upper_outlying_indices.shape[0] == previous_values[0] and lower_outlying_indices.shape[0] == \
+                previous_values[1]:
+            continue
+        else:
+            previous_values[0] = upper_outlying_indices.shape[0]
+            previous_values[1] = lower_outlying_indices.shape[0]
+            upper_outlying_indices_dict[threshold] = upper_outlying_indices
+            lower_outlying_indices_dict[threshold] = lower_outlying_indices
+            # for i in upper_outlying_indices:
+            #     element_dict[leaves[i[0]].data[:, 0][0]] = leaves[i[0]].data.shape[0]
+            for j in lower_outlying_indices:
+                element_dict[leaves[j[0]].data[:, 0][0]] = leaves[j[0]].data.shape[0]
+            outlying_elements[threshold] = element_dict
+    return outlying_elements
+
+    # add here the explanation of the results
+    # TODO: fix here and put dict
+    # for index in upper_outlying_indices:
+    #     median = medians[index]
+    #     alpha = matrices_packet[0][:][index]
+    #     beta = matrices_packet[1][:][index]
+    #     gamma = matrices_packet[2][:][index]
+    #     score = score_matrix[index]
+    #     dif = abs(score - median)
+    #     indices_of_median = np.where(dif == dif.min())[1]
+    #
+    #     specific_alphas = alpha[0][indices_of_median]
+    #     specific_betas = beta[0][indices_of_median]
+    #     specific_gammas = gamma[0][indices_of_median]
+    #
+    #     # Here start doing the partial derivative
+    #     # TODO fix the partial derivative
+    #     partial_a, partial_b, partial_c = partial_derivative(oddCase=True, alpha_list=specific_alphas,
+    #                                                          beta_list=specific_betas,
+    #                                                          gamma_list=specific_gammas)
+    # print(" ")
+
+    # return jsonify(upper_outlying_indices_dict,lower_outlying_indices_dict)
+
+    # if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
+    #     print("NOTHING TO REPORT for the column " + column)
+    # else:
+    #     print("Report outliers for the column " + column)
+    #     for i in upper_outlying_indices:
+    #         element, count = np.unique(leaves[i[0]].data[:, 0], return_counts=True)
+    #         print(str(element) + " appears " + str(count) + " times")
+    #     for j in lower_outlying_indices:
+    #         element, count = np.unique(leaves[j[0]].data[:, 0], return_counts=True)
+    #         print(str(element) + " appears " + str(count) + " times")
+
+
+def add_outlying_elements_to_attribute(column: str, output: dict, dataframe: pd.DataFrame):
+    output[str(column)] = process_attribute(column, dataframe)
+    return output
+
+
 def process(file):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
-    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
-    dataframe = read_data("../resources/json_dumps/" + file.filename)
+    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/dirty.csv")
+    dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
+    # dataframe = read_data("../resources/json_dumps/" + file.filename)
     output = {}
-    for column in dataframe.columns:
-        # column = "School Name"
-        attribute = process_data(pd.DataFrame(dataframe[column]))
-        root = tree_grow(attribute)
-        leaves = root.leaves
-        # graph.add_nodes_from(leaves)
-        distance_matrix = create_distance_matrix(leaves)
-        matrices_packet = score_function(leaves, distance_matrix)
-        score_matrix = matrices_packet[3]
-        medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
-        median_of_medians = np.median(medians)
-        # We need those four lines for the explanation of the results
-        # difference = abs(medians - median_of_medians)
-        # median_list = np.where(difference == difference.min())[0]
-        # mean_absolute_deviation = abs(medians - median_of_medians)
-        outlying_elements = {}
-        # TODO : Make threshold dynamic
-        threshold_values = np.linspace(0.20, 2, 450)
-        previous_values = [-1, -1]
-        upper_outlying_indices_dict = {}
-        lower_outlying_indices_dict = {}
-        for threshold in threshold_values:
-            element_dict = {}
-            upper_outlying_indices = np.argwhere(medians > (median_of_medians + median_of_medians * threshold))
-            lower_outlying_indices = np.argwhere(medians < (median_of_medians - median_of_medians * threshold))
-            if upper_outlying_indices.shape[0] == previous_values[0] and lower_outlying_indices.shape[0] == \
-                    previous_values[1]:
-                continue
-            else:
-                previous_values[0] = upper_outlying_indices.shape[0]
-                previous_values[1] = lower_outlying_indices.shape[0]
-                upper_outlying_indices_dict[threshold] = upper_outlying_indices
-                lower_outlying_indices_dict[threshold] = lower_outlying_indices
-                for i in upper_outlying_indices:
-                    element_dict[leaves[i[0]].data[:, 0][0]] = leaves[i[0]].data.shape[0]
-                for j in lower_outlying_indices:
-                    element_dict[leaves[j[0]].data[:, 0][0]] = leaves[j[0]].data.shape[0]
-                outlying_elements[threshold] = element_dict
-        output[str(column)] = outlying_elements
-        print("123")
-
-        # add here the explanation of the results
-        # TODO: fix here and put dict
-        # for index in upper_outlying_indices:
-        #     median = medians[index]
-        #     alpha = matrices_packet[0][:][index]
-        #     beta = matrices_packet[1][:][index]
-        #     gamma = matrices_packet[2][:][index]
-        #     score = score_matrix[index]
-        #     dif = abs(score - median)
-        #     indices_of_median = np.where(dif == dif.min())[1]
-        #
-        #     specific_alphas = alpha[0][indices_of_median]
-        #     specific_betas = beta[0][indices_of_median]
-        #     specific_gammas = gamma[0][indices_of_median]
-        #
-        #     # Here start doing the partial derivative
-        #     # TODO fix the partial derivative
-        #     partial_a, partial_b, partial_c = partial_derivative(oddCase=True, alpha_list=specific_alphas,
-        #                                                          beta_list=specific_betas,
-        #                                                          gamma_list=specific_gammas)
-        # print(" ")
-
-        # return jsonify(upper_outlying_indices_dict,lower_outlying_indices_dict)
-
-        # if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
-        #     print("NOTHING TO REPORT for the column " + column)
-        # else:
-        #     print("Report outliers for the column " + column)
-        #     for i in upper_outlying_indices:
-        #         element, count = np.unique(leaves[i[0]].data[:, 0], return_counts=True)
-        #         print(str(element) + " appears " + str(count) + " times")
-        #     for j in lower_outlying_indices:
-        #         element, count = np.unique(leaves[j[0]].data[:, 0], return_counts=True)
-        #         print(str(element) + " appears " + str(count) + " times")
-    print("123")
+    output = Parallel(n_jobs=-1)(
+        delayed(add_outlying_elements_to_attribute)(column, output, dataframe) for column in dataframe.columns)
     return output
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=False)
-    file = "testTestTest"
+    # app.run(host="0.0.0.0", debug=False)
+    t = time.time()
+    file = "../json_dumps/testing123.csv"
     big_dict = process(file=file)
+    print(time.time() - t)
     json_serialisation = json.dumps(big_dict)
