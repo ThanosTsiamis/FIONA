@@ -107,13 +107,17 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     return root
 
 
-def node_distance(node1: Node, node2: Node):
+def calculate_penalty(specificity_level: int, penalty: int):
+    return int(penalty / (specificity_level + 1))
+
+
+def node_distance(node1: Node, node2: Node, penalty: int):
     sameClass = node1.data[:, 1][0] == node2.data[:, 1][0]
     sameLength = len(node1.data[:, 0][0]) == len(node2.data[:, 0][0])
     if sameClass:
         if sameLength:
             for char_pos in range(len(node1.data[:, 0][0])):
-                if node1.data[:, 0][0][char_pos] == node2.data[:, 0][char_pos]:
+                if node1.data[0, 0][char_pos] == node2.data[0, 0][char_pos]:
                     continue
                 else:
                     break
@@ -122,8 +126,8 @@ def node_distance(node1: Node, node2: Node):
             # add the specificity levels  +2
             return node1.specificity_level + node2.specificity_level + 2
     else:
-        # add the specificity levels with  +4
-        return node1.specificity_level + node2.specificity_level + 4
+        return node1.specificity_level + node2.specificity_level + 4 + calculate_penalty(
+            node1.specificity_level, penalty=penalty) + calculate_penalty(node2.specificity_level, penalty=penalty)
 
 
 def create_distance_matrix(leaves: tuple):
@@ -133,14 +137,19 @@ def create_distance_matrix(leaves: tuple):
     :param leaves: The leaves created by the tree.
     :return: The distance matrix
     """
+    max_depth = max([leaf.depth for leaf in leaves])
     matrix = np.empty([len(leaves), len(leaves)], dtype='float64')
     matrix.fill(0)
+
     for first_index in range(len(leaves)):
+        t = time.time()
         for second_index in range(first_index, len(leaves)):
             if first_index == second_index:
                 matrix[first_index][second_index] = 0
             else:
-                matrix[first_index][second_index] = (node_distance(leaves[first_index], leaves[second_index]))
+                matrix[first_index][second_index] = (
+                    node_distance(leaves[first_index], leaves[second_index], max_depth))
+        print("outside loops in " + str(time.time() - t))
     matrix = matrix + matrix.T
     return matrix
 
@@ -161,6 +170,7 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
     matrix = np.empty([4, len(leaves), len(leaves)], dtype='float64')
     matrix.fill(0)
     for i in range(len(distance_matrix)):
+        print(str(i) + " out of " + str(len(distance_matrix)))
         for j in range(i, len(distance_matrix[0])):
             if i == j:
                 matrix[0][i][j] = 0
@@ -190,9 +200,9 @@ def upload_file():
         f = request.files['file']
         f.save("../resources/json_dumps/" + f.filename)
         outlying_elements = process(file=f)
-        json_serialisation = json.dumps(outlying_elements)
+        json_serialised = json.dumps(outlying_elements)
         with open("../resources/json_dumps/" + f.filename + ".json", "w") as outfile:
-            outfile.write(json_serialisation)
+            outfile.write(json_serialised)
         redirection = redirect("http://localhost:3000/results")
         redirection.headers.add('Access-Control-Allow-Origin', '*')
         return redirection
@@ -208,8 +218,8 @@ def fetch(filename):
 
 
 # TODO: Fix here not completely correct check notes
-def partial_derivative(oddCase: bool, alpha_list: list, beta_list: list, gamma_list: list):
-    if oddCase:
+def partial_derivative(odd_case: bool, alpha_list: list, beta_list: list, gamma_list: list):
+    if odd_case:
         alpha_partial_derivative = (1 / beta_list[0]) * (1 / gamma_list[0])
         beta_partial_derivative = -alpha_list[0] / ((beta_list[0] ** 2) * gamma_list[0])
         gamma_partial_derivative = -alpha_list[0] / ((gamma_list[0] ** 2) * beta_list[0])
@@ -300,24 +310,32 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
 
 def add_outlying_elements_to_attribute(column: str, output: dict, dataframe: pd.DataFrame):
     output[str(column)] = process_attribute(column, dataframe)
+    print("Finished " + column)
     return output
 
 
-def process(file):
+def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/dirty.csv")
-    dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
+    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
+    dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
     # dataframe = read_data("../resources/json_dumps/" + file.filename)
     output = {}
-    output = Parallel(n_jobs=-1)(
-        delayed(add_outlying_elements_to_attribute)(column, output, dataframe) for column in dataframe.columns)
+
+    if multiprocess_switch:
+        output = Parallel(n_jobs=-1)(
+            delayed(add_outlying_elements_to_attribute)(column, output, dataframe) for column in dataframe.columns)
+    else:
+        for column in dataframe.columns:
+            # column = "fnlwgt"
+            output = add_outlying_elements_to_attribute(column, output, dataframe)
     return output
 
 
 if __name__ == "__main__":
     # app.run(host="0.0.0.0", debug=False)
     t = time.time()
-    file = "../json_dumps/testing123.csv"
-    big_dict = process(file=file)
+    filename = "../json_dumps/testing123.csv"
+    multiprocess = False
+    big_dict = process(filename, multiprocess)
     print(time.time() - t)
-    json_serialisation = json.dumps(big_dict)
