@@ -7,7 +7,9 @@ function ResultsPage() {
 
     useEffect(() => {
         const fetchData = async () => {
-            const response = await fetch(`http://localhost:5000/api/fetch/${filename}`);
+            const response = await fetch(
+                `http://localhost:5000/api/fetch/${filename}`
+            );
             const jsonData = await response.json();
             setData(jsonData);
         };
@@ -17,12 +19,40 @@ function ResultsPage() {
         }
     }, [filename]);
 
+    const renderTable = (obj: any) => {
+        const headers = Object.keys(obj);
+        const rows = Object.values(obj).map((row: any, index: number) => {
+            return (
+                <tr key={index}>
+                    {headers.map((header, index) => (
+                        <td key={index}>{JSON.stringify(row[header])}</td>
+                    ))}
+                </tr>
+            );
+        });
+
+        return (
+            <table>
+                <thead>
+                <tr>
+                    {headers.map((header, index) => (
+                        <th key={index}>{header}</th>
+                    ))}
+                </tr>
+                </thead>
+                <tbody>{rows}</tbody>
+            </table>
+        );
+    };
+
     return (
         <div>
             {data ? (
                 <div>
                     <h2>Results for {filename}:</h2>
-                    <pre>{JSON.stringify(data, null, 2)}</pre>
+                    {data.map((obj: any, index: number) => (
+                        <div key={index}>{renderTable(obj)}</div>
+                    ))}
                 </div>
             ) : (
                 <p>Loading...</p>

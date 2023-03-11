@@ -3,6 +3,7 @@ import {useRouter} from 'next/router';
 import {UploadContext} from '../components/UploadContext';
 import Papa from 'papaparse';
 import Image from "next/image";
+import Head from "next/head";
 
 function FileUploadForm() {
     const {filename, setFilename} = useContext(UploadContext);
@@ -56,49 +57,54 @@ function FileUploadForm() {
     };
 
     return (<div>
+            <Head>
+                <title>FIONA</title>
+            </Head>
             <h1 className="mb-4 ml-10 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-1xl lg:text-5xl dark:text-white">Outlier
                 Detector</h1>
             <p className="mb-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">Discover
                 hidden insights and unlock the true potential of your data with our cutting-edge categorical outlier
                 detection technology.</p>
-
-            <form onSubmit={handleSubmit}>
-                <input type="file" ref={fileInput} onChange={handleFileChange}/>
-                <button type="submit"
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
-                        disabled={isLoading}>Upload
-                </button>
-                {isLoading && (
-                    <div className="flex items-center justify-center">
-                        <div
-                            className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
-                            role="status">
+            <div className="flex items-center justify-center">
+                <form onSubmit={handleSubmit}>
+                    <input type="file" ref={fileInput} onChange={handleFileChange}/>
+                    <button type="submit"
+                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
+                            disabled={isLoading}>Upload
+                    </button>
+                    {isLoading && (
+                        <div className="flex items-center justify-center">
+                            <div
+                                className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+                                role="status">
     <span
         className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]"
-    >Loading...</span
+    >Processing...</span
     >
+                            </div>
                         </div>
-                    </div>
-                )}
-                <table>
-                    <thead>
-                    <tr>
-                        {csvData[0]?.map((header) => (
-                            <th key={header}>{header}</th>
-                        ))}
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {csvData.slice(1).map((row, index) => (
-                        <tr key={index}>
-                            {row.map((cell, index) => (
-                                <td key={index}>{cell}</td>
+                    )}
+                    <table>
+                        <thead>
+                        <tr>
+                            {csvData[0]?.map((header) => (
+                                <th key={header}>{header}</th>
                             ))}
                         </tr>
-                    ))}
-                    </tbody>
-                </table>
-            </form>
+                        </thead>
+                        <tbody>
+                        {csvData.slice(1).map((row, index) => (
+                            <tr key={index}>
+                                {row.map((cell, index) => (
+                                    <td key={index}>{cell}</td>
+                                ))}
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </form>
+            </div>
+
             <footer className="fixed inset-x-0 bottom-0">
                 <div className="sm:items-center sm:justify-between">
                     <a href="https://www.uu.nl/en/" className="flex items-center mb-4 sm:mb-0">
