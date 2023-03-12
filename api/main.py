@@ -1,5 +1,4 @@
 import json
-import random
 import time
 
 import numpy
@@ -46,16 +45,14 @@ def find_unique_elements(generalised_string):
     return set(generalised_string)
 
 
-def feature_to_split_on(specificity_level, df):
+def feature_to_split_on(specificity_level, df: numpy.ndarray, name: str):
     """
-
     :param specificity_level: Specificity level corresponds to the depth of the tree. Based on the depth of the tree
     different kind of splits are done.
     :param df: The dataframe to be split into sub-dataframes.
     :return: The set of the distinct possible options on which the root algorithm will split upon.
     """
     if specificity_level == -2:
-        # TODO : FIX HERE
         res = [i for n, i in enumerate(df[:, 1]) if i not in df[:, 1][:n]]
         return res
     elif specificity_level == -1:
@@ -63,10 +60,9 @@ def feature_to_split_on(specificity_level, df):
         result = set(length(df)[:, 0])
         return result
     else:
-        # add here the new function
         character_split = lambda x: x[:specificity_level + 1]
         word_split = np.vectorize(character_split)
-        return set(word_split(df[:, 0]))
+        return set(np.append(word_split(df[:, 0]), str(name) * (len(df[0, 0]) // len(str(name)))))
 
 
 def tree_grow(column: pd.DataFrame, nDistinctMin=2):
@@ -87,19 +83,35 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
         if np.unique(current_node.data[:, 0]).shape[0] < nDistinctMin and current_node.specificity_level > 0:
             continue
         children_identifiers = feature_to_split_on(specificity_level=current_node.specificity_level,
-                                                   df=current_node.data)
+                                                   df=current_node.data, name=current_node.name)
         if len(children_identifiers) == 1 and current_node.specificity_level == len(str(current_node.data[0, 0])):
             continue
+        surviving_data = current_node.data
+        children_identifiers = list(children_identifiers)
+        (children_identifiers).sort(key=lambda s: len(str(s)), reverse=True)
         for item in children_identifiers:
+            main_data = surviving_data
             if current_node.specificity_level == -2:
                 positions = np.nonzero(np.isin(current_node.data[:, 1], item))
+                data_for_child = current_node.data[positions]
             elif current_node.specificity_level == -1:
                 length = np.vectorize(len)
                 positions = np.nonzero(np.isin(length(current_node.data[:, 0]), item))
+                data_for_child = current_node.data[positions]
+
             else:
-                positions = [i for i, si in enumerate(current_node.data[:, 0]) if si.startswith(item)]
-            data_for_child = current_node.data[positions]
-            child = Node(str(random.random), parent=current_node, data=data_for_child,
+                positions = [i for i, si in enumerate(main_data[:, 0]) if si.startswith(item)]
+                if len(positions) == 0:
+                    continue
+                temp_data = main_data[positions]
+                surviving_data = np.delete(main_data[:], positions, axis=0)
+                data_for_child = temp_data
+
+            if current_node.specificity_level < 0:
+                node_id = current_node.specificity_level + 1
+            else:
+                node_id = data_for_child[0, 0][:current_node.specificity_level + 1]
+            child = Node(node_id, parent=current_node, data=data_for_child,
                          specificity_level=current_node.specificity_level + 1)
             child_list.append(child)
             node_list.append(child)
@@ -116,7 +128,7 @@ def node_distance(node1: Node, node2: Node, penalty: int):
     sameLength = len(node1.data[:, 0][0]) == len(node2.data[:, 0][0])
     if sameClass:
         if sameLength:
-            for char_pos in range(len(node1.data[:, 0][0])):
+            for char_pos in range(len(node1.data[0, 0])):
                 if node1.data[0, 0][char_pos] == node2.data[0, 0][char_pos]:
                     continue
                 else:
@@ -169,6 +181,7 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
     # Order is depth,height,width
     matrix = np.empty([4, len(leaves), len(leaves)], dtype='float64')
     matrix.fill(0)
+    # TODO Fix here the loop so it only happens once
     for i in range(len(distance_matrix)):
         print(str(i) + " out of " + str(len(distance_matrix)))
         for j in range(i, len(distance_matrix[0])):
@@ -327,7 +340,7 @@ def process(file: str, multiprocess_switch):
             delayed(add_outlying_elements_to_attribute)(column, output, dataframe) for column in dataframe.columns)
     else:
         for column in dataframe.columns:
-            # column = "fnlwgt"
+            column = "fnlwgt"
             output = add_outlying_elements_to_attribute(column, output, dataframe)
     return output
 
