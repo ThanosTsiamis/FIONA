@@ -141,32 +141,7 @@ def node_distance(node1: Node, node2: Node, penalty: int):
         return node1.specificity_level + node2.specificity_level + 4 + calculate_penalty(
             node1.specificity_level, penalty=penalty) + calculate_penalty(node2.specificity_level, penalty=penalty)
 
-
-def create_distance_matrix(leaves: tuple):
-    """
-        Creates the distance matrix which contains the distances of each pair of leaves. Distance matrix is symmetric,
-        which means that matrix[i][j]==matrix[j][i].
-    :param leaves: The leaves created by the tree.
-    :return: The distance matrix
-    """
-    max_depth = max([leaf.depth for leaf in leaves])
-    matrix = np.empty([len(leaves), len(leaves)], dtype='float64')
-    matrix.fill(0)
-
-    for first_index in range(len(leaves)):
-        t = time.time()
-        for second_index in range(first_index, len(leaves)):
-            if first_index == second_index:
-                matrix[first_index][second_index] = 0
-            else:
-                matrix[first_index][second_index] = (
-                    node_distance(leaves[first_index], leaves[second_index], max_depth))
-        print("outside loops in " + str(time.time() - t))
-    matrix = matrix + matrix.T
-    return matrix
-
-
-def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
+def score_function(leaves: tuple):
     """
         Computes a score for each pair of leaves. Score function depends on three quantities:
         (i): The product of elements in each leaf (i.e. masses multiplication)
@@ -175,27 +150,30 @@ def score_function(leaves: tuple, distance_matrix: numpy.ndarray):
         Each quantity is stored in a different matrix in the same position and the tree quantities are multiplied in the
         end creating the score matrix function.
     :param leaves:
-    :param distance_matrix:
-    :return:
+    :return: A stack of matrices. The first 3 (indices 0-1-2) have the components of the function, while index 3 has the
+            final score.
     """
     # Order is depth,height,width
+    max_depth = max([leaf.depth for leaf in leaves])
     matrix = np.empty([4, len(leaves), len(leaves)], dtype='float64')
     matrix.fill(0)
-    # TODO Fix here the loop so it only happens once
-    for i in range(len(distance_matrix)):
-        print(str(i) + " out of " + str(len(distance_matrix)))
-        for j in range(i, len(distance_matrix[0])):
+
+    # TODO: Maybe parallelise it here?
+    for i in range(len(leaves)):
+        t = time.time()
+        for j in range(i, len(leaves)):
             if i == j:
                 matrix[0][i][j] = 0
+                matrix[1][i][j] = 0
             else:
                 masses_multiplication = (leaves[i].data.shape[0] * leaves[j].data.shape[0])
                 matrix[0][i][j] = masses_multiplication
 
-            distance_squared = ((distance_matrix[i][j]) ** 2)
-            matrix[1][i][j] = distance_squared
+                matrix[1][i][j] = (node_distance(leaves[i], leaves[j], max_depth)) ** 2
 
             masses_difference = abs(leaves[i].data.shape[0] - leaves[j].data.shape[0]) + 1
             matrix[2][i][j] = masses_difference
+        print("loops in " + str(time.time() - t))
 
     outcome = np.divide(matrix[0], matrix[1], out=np.zeros_like(matrix[0]), where=matrix[1] != 0)
     outcome = outcome + outcome.T
@@ -251,8 +229,8 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     root = tree_grow(attribute)
     leaves = root.leaves
     # graph.add_nodes_from(leaves)
-    distance_matrix = create_distance_matrix(leaves)
-    matrices_packet = score_function(leaves, distance_matrix)
+    # distance_matrix = create_distance_matrix(leaves)
+    matrices_packet = score_function(leaves)
     score_matrix = matrices_packet[3]
     medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
     median_of_medians = np.median(medians)
@@ -261,7 +239,7 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     # median_list = np.where(difference == difference.min())[0]
     # mean_absolute_deviation = abs(medians - median_of_medians)
     outlying_elements = {}
-    # TODO : Make threshold dynamic
+
     threshold_values = np.linspace(0.0002, 1, 1100)
     previous_values = [-1, -1]
     upper_outlying_indices_dict = {}
