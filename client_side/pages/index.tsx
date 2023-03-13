@@ -11,6 +11,7 @@ function FileUploadForm() {
     const router = useRouter();
     const [csvData, setCsvData] = useState<Array<Array<string>>>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [enableParallel, setEnableParallel] = useState(false);
 
     const handleFileChange = () => {
         const file = fileInput.current?.files?.[0];
@@ -25,6 +26,9 @@ function FileUploadForm() {
             },
         });
     };
+    const handleParallelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEnableParallel(e.target.checked);
+    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -34,6 +38,9 @@ function FileUploadForm() {
             return;
         }
         formData.append('file', file);
+        if (enableParallel) {
+            formData.append('enableParallel', 'true')
+        }
 
         try {
             setIsLoading(true);
@@ -68,6 +75,16 @@ function FileUploadForm() {
             <div className="flex items-center justify-center">
                 <form onSubmit={handleSubmit}>
                     <input type="file" ref={fileInput} onChange={handleFileChange}/>
+                    <div className="flex items-center my-4">
+                        <input
+                            type="checkbox"
+                            id="enable-parallel"
+                            checked={enableParallel}
+                            onChange={handleParallelChange}
+                            className="mr-2"
+                        />
+                        <label htmlFor="enable-parallel">Enable Parallelization</label>
+                    </div>
                     <button type="submit"
                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
                             disabled={isLoading}>Upload
