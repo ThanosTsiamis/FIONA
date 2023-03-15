@@ -3,7 +3,7 @@ import time
 
 from flask import Flask, request, jsonify, redirect
 
-from api.algorithm import process
+from algorithm import process
 
 app = Flask("FIONA")
 

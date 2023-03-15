@@ -156,7 +156,7 @@ def score_function(leaves: tuple):
 
     # TODO: Maybe parallelise it here?
     for i in range(len(leaves)):
-        t = time.time()
+        z = time.time()
         for j in range(i, len(leaves)):
             if i == j:
                 matrix[0][i][j] = 0
@@ -169,7 +169,7 @@ def score_function(leaves: tuple):
 
             masses_difference = abs(leaves[i].data.shape[0] - leaves[j].data.shape[0]) + 1
             matrix[2][i][j] = masses_difference
-        print("loops in " + str(time.time() - t))
+        print("loops in " + str(time.time() - z))
 
     outcome = np.divide(matrix[0], matrix[1], out=np.zeros_like(matrix[0]), where=matrix[1] != 0)
     outcome = outcome + outcome.T
@@ -202,7 +202,6 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     root = tree_grow(attribute)
     leaves = root.leaves
     # graph.add_nodes_from(leaves)
-    # distance_matrix = create_distance_matrix(leaves)
     matrices_packet = score_function(leaves)
     score_matrix = matrices_packet[3]
     medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
@@ -215,22 +214,23 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
 
     threshold_values = np.linspace(0.0002, 1, 1100)
     previous_values = [-1, -1]
-    upper_outlying_indices_dict = {}
+    pattern_indices_dict = {}
     lower_outlying_indices_dict = {}
     for threshold in threshold_values:
         element_dict = {}
-        upper_outlying_indices = np.argwhere(medians > (median_of_medians * threshold))
+        pattern_indices = np.argwhere(medians > (median_of_medians * threshold))
         lower_outlying_indices = np.argwhere(medians < (median_of_medians * threshold))
-        if upper_outlying_indices.shape[0] == previous_values[0] and lower_outlying_indices.shape[0] == \
-                previous_values[1]:
+        if pattern_indices.shape[0] == previous_values[0] and lower_outlying_indices.shape[0] == previous_values[1]:
+            continue
+        if lower_outlying_indices.shape[0] == previous_values[1]:
             continue
         else:
-            previous_values[0] = upper_outlying_indices.shape[0]
+            previous_values[0] = pattern_indices.shape[0]
             previous_values[1] = lower_outlying_indices.shape[0]
-            upper_outlying_indices_dict[threshold] = upper_outlying_indices
+            pattern_indices_dict[threshold] = pattern_indices
             lower_outlying_indices_dict[threshold] = lower_outlying_indices
-            # for i in upper_outlying_indices:
-            #     element_dict[leaves[i[0]].data[:, 0][0]] = leaves[i[0]].data.shape[0]
+            for i in pattern_indices:
+                element_dict[leaves[i[0]].data[:, 0][0]] = leaves[i[0]].data.shape[0]
             for j in lower_outlying_indices:
                 element_dict[leaves[j[0]].data[:, 0][0]] = leaves[j[0]].data.shape[0]
             outlying_elements[threshold] = element_dict

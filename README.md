@@ -1,28 +1,37 @@
-# Categorical Outlier Detector
+# FIONA: FInding Outliers iN Attributes
 
-Categorical Outlier Detector is the Master's Thesis of Thanos Tsiamis
+FIONA is the Master's Thesis of Thanos Tsiamis
 at Utrecht University for the program of Computing Science. It was developed under
 the supervision of Dr. A.A.A. (Hakim) Qahtan for the academic year of 2022 - 2023.
 
-Categorical Outlier Detector is a system that aims to find erroneous values
+FIONA aims to find erroneous values
 in a dataset.
 
 ##How to run
-There are 2 ways to run the project: (i)Locally and (ii) in Docker.
+There are 2 ways to run the project: (i) Locally and (ii) in Docker.
 
 **We strongly advise towards the second way (Docker) due to its simplicity.**
 
 ###Local execution
 **Important Note**: Make sure that node.Js and Python are installed in your system.
 
-For the front end:
+For the **front end**:
+
+One liner in terminal: `cd .\client_side\ & npm install & npm run dev`
+
+Explanation:
 
 - Open a terminal and cd to the `client_side` folder 
 - Run the command `npm install`
 - Run the command `npm run dev`
 
-For the back end:
+For the **back end**:
+
+One liner in terminal `cd api & pip install -r requirements.txt & python main.py`
+
+Explanation:
 - Open a second terminal and cd to the api folder
+- Install the necessary requirements in `requirements.txt` file
 - Run the command `python main.py`
 
 ###Docker
