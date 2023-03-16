@@ -57,7 +57,15 @@ def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
     else:
         character_split = lambda x: x[:specificity_level + 1]
         word_split = np.vectorize(character_split)
-        return set(np.append(word_split(df[:, 0]), str(name) * (len(df[0, 0]) // len(str(name)))))
+        if specificity_level == 0:
+            return set(word_split(df[:, 0]))
+        else:
+            return set(np.append(word_split(df[:, 0]),
+                                 str(name)[:specificity_level] * (
+                                         len(df[0, 0]) // len(str(name[:specificity_level]))
+                                 )
+                                 )
+                       )
 
 
 def tree_grow(column: pd.DataFrame, nDistinctMin=2):
@@ -83,7 +91,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
             continue
         surviving_data = current_node.data
         children_identifiers = list(children_identifiers)
-        (children_identifiers).sort(key=lambda s: len(str(s)), reverse=True)
+        children_identifiers.sort(key=lambda s: len(str(s)), reverse=True)
         for item in children_identifiers:
             main_data = surviving_data
             if current_node.specificity_level == -2:
@@ -105,7 +113,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
             if current_node.specificity_level < 0:
                 node_id = current_node.specificity_level + 1
             else:
-                node_id = data_for_child[0, 0][:current_node.specificity_level + 1]
+                node_id = generalise_string(data_for_child[0, 0], current_node.specificity_level + 1)
             child = Node(node_id, parent=current_node, data=data_for_child,
                          specificity_level=current_node.specificity_level + 1)
             child_list.append(child)
@@ -210,14 +218,18 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     # difference = abs(medians - median_of_medians)
     # median_list = np.where(difference == difference.min())[0]
     # mean_absolute_deviation = abs(medians - median_of_medians)
+    output_dictionary = {}
     outlying_elements = {}
+    pattern_elements = {}
 
     threshold_values = np.linspace(0.0002, 1, 1100)
     previous_values = [-1, -1]
     pattern_indices_dict = {}
     lower_outlying_indices_dict = {}
     for threshold in threshold_values:
-        element_dict = {}
+        element_dict_outliers = {}
+        element_dict_patterns = {}
+
         pattern_indices = np.argwhere(medians > (median_of_medians * threshold))
         lower_outlying_indices = np.argwhere(medians < (median_of_medians * threshold))
         if pattern_indices.shape[0] == previous_values[0] and lower_outlying_indices.shape[0] == previous_values[1]:
@@ -230,11 +242,15 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
             pattern_indices_dict[threshold] = pattern_indices
             lower_outlying_indices_dict[threshold] = lower_outlying_indices
             for i in pattern_indices:
-                element_dict[leaves[i[0]].data[:, 0][0]] = leaves[i[0]].data.shape[0]
+                element_dict_patterns[leaves[i[0]].data[:, 0][0]] = leaves[i[0]].data.shape[0]
+            # instead of the value here put a dict with the patterns
             for j in lower_outlying_indices:
-                element_dict[leaves[j[0]].data[:, 0][0]] = leaves[j[0]].data.shape[0]
-            outlying_elements[threshold] = element_dict
-    return outlying_elements
+                element_dict_outliers[leaves[j[0]].data[:, 0][0]] = leaves[j[0]].data.shape[0]
+            outlying_elements[threshold] = element_dict_outliers
+            pattern_elements[threshold] = element_dict_patterns
+    output_dictionary["outliers"] = outlying_elements
+    output_dictionary["patterns"] = pattern_elements
+    return output_dictionary
 
     # add here the explanation of the results
     # TODO: fix here and put dict
@@ -272,25 +288,28 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     #         print(str(element) + " appears " + str(count) + " times")
 
 
-def add_outlying_elements_to_attribute(column: str, output: dict, dataframe: pd.DataFrame):
-    output[str(column)] = process_attribute(column, dataframe)
+def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
+    col_outliers_and_patterns = {str(column): process_attribute(column, dataframe)}
     print("Finished " + column)
-    return output
+    return col_outliers_and_patterns
 
 
 def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/dirty.csv")
+    dataframe = read_data("../resources/json_dumps/dirty.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
-    dataframe = read_data("../resources/json_dumps/" + file.filename)
+    # dataframe = read_data("../resources/json_dumps/" + file.filename)
     output = {}
 
-    if multiprocess_switch:
+    # FIXME LATER
+    if False:
         output = Parallel(n_jobs=-1)(
-            delayed(add_outlying_elements_to_attribute)(column, output, dataframe) for column in dataframe.columns)
+            delayed(add_outlying_elements_to_attribute)(column, dataframe) for column in dataframe.columns)
     else:
         for column in dataframe.columns:
-            # column = "fnlwgt"
-            output = add_outlying_elements_to_attribute(column, output, dataframe)
+            # column = "sched_dep_time"
+            output.update(add_outlying_elements_to_attribute(column, dataframe))
+            print("123123")
     return output
