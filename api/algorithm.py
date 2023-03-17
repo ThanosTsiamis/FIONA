@@ -5,12 +5,11 @@ import pandas as pd
 from anytree import Node
 from joblib import Parallel, delayed
 
-
+# TODO: Add later on more ways to read data such as tsv, json, database etc.
 def read_data(filename):
     return pd.read_csv(filename, dtype=str)
 
 
-# TODO: Fix here the problem with generalised unique elements
 def process_data(dataframe: pd.DataFrame):
     dataframe = dataframe.fillna('')
     dataframe['GeneralisedUniqueElements'] = dataframe.applymap(generalise_string).applymap(find_unique_elements)
@@ -42,6 +41,10 @@ def find_unique_elements(generalised_string):
 
 def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
     """
+    This function determines the kind of split that will be applied on the data base at hand. This is mostly dependent
+    on the specificity_level (i.e. the depth of the tree). However, for depths greater than 2, an extra criterion is
+    added which check for repeating values. This is done by multiplying the non abstract part of the name of the node
+    as much as necessary in order to produce repeating patterns.
     :param specificity_level: Specificity level corresponds to the depth of the tree. Based on the depth of the tree
     different kind of splits are done.
     :param df: The dataframe to be split into sub-dataframes.
@@ -214,15 +217,11 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     score_matrix = matrices_packet[3]
     medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
     median_of_medians = np.median(medians)
-    # We need those four lines for the explanation of the results
-    # difference = abs(medians - median_of_medians)
-    # median_list = np.where(difference == difference.min())[0]
-    # mean_absolute_deviation = abs(medians - median_of_medians)
     output_dictionary = {}
     outlying_elements = {}
     pattern_elements = {}
 
-    threshold_values = np.linspace(0.0002, 1, 1100)
+    threshold_values = np.linspace(51, 100, 2500)
     previous_values = [-1, -1]
     pattern_indices_dict = {}
     lower_outlying_indices_dict = {}
@@ -230,8 +229,12 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
         element_dict_outliers = {}
         element_dict_patterns = {}
 
-        pattern_indices = np.argwhere(medians > (median_of_medians * threshold))
-        lower_outlying_indices = np.argwhere(medians < (median_of_medians * threshold))
+        pattern_threshold = np.percentile(medians - median_of_medians, threshold)
+        outlier_threshold = np.percentile(medians - median_of_medians, 100 - threshold)
+
+        pattern_indices = np.argwhere(medians - median_of_medians > pattern_threshold)
+        lower_outlying_indices = np.argwhere(medians - median_of_medians < outlier_threshold)
+
         if pattern_indices.shape[0] == previous_values[0] and lower_outlying_indices.shape[0] == previous_values[1]:
             continue
         if lower_outlying_indices.shape[0] == previous_values[1]:
@@ -297,10 +300,12 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
 def process_column(column, dataframe):
     return add_outlying_elements_to_attribute(column, dataframe)
 
+
 def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/dirty.csv")
-    dataframe = read_data("../resources/json_dumps/dirty.csv")
+    # dataframe = read_data("../resources/json_dumps/dirty.csv")
+    dataframe = read_data("../resources/json_dumps/pima-indians-diabetes.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
     # dataframe = read_data("../resources/json_dumps/" + file.filename)
@@ -316,7 +321,7 @@ def process(file: str, multiprocess_switch):
             output.update(res)
     else:
         for column in dataframe.columns:
-            # column = "sched_dep_time"
+            # column = "Number of times pregnant"
             output.update(add_outlying_elements_to_attribute(column, dataframe))
             print("123123")
     return output

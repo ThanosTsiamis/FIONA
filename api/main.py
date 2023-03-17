@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # app.run(host="0.0.0.0", debug=False)
     t = time.time()
     filename = "../json_dumps/testing123.csv"
-    multiprocess = True
+    multiprocess = False
     big_dict = process(filename, multiprocess)
     json_serialised = json.dumps(big_dict)
     with open("../resources/json_dumps/" + "jhjhbjhbhj.json", "w") as outfile:
