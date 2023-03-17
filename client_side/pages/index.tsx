@@ -12,10 +12,18 @@ function FileUploadForm() {
     const [csvData, setCsvData] = useState<Array<Array<string>>>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [enableParallel, setEnableParallel] = useState(false);
+    const [error, setError] = useState('');
 
     const handleFileChange = () => {
         const file = fileInput.current?.files?.[0];
         if (!file) {
+            return;
+        }
+        const fileSizeInMb = file.size / (1024 * 1024);
+        const maxFileSizeInMb = 3.5;
+
+        if (fileSizeInMb > maxFileSizeInMb) {
+            setError('File is too large to be previewed on screen and will slow down your computer');
             return;
         }
 
@@ -41,7 +49,7 @@ function FileUploadForm() {
         if (enableParallel) {
             formData.append('enableParallel', 'True')
         } else {
-            formData.append('enableParallel','False')
+            formData.append('enableParallel', 'False')
         }
 
         try {
@@ -86,6 +94,7 @@ function FileUploadForm() {
                             className="mr-2"
                         />
                         <label htmlFor="enable-parallel">Enable Parallelization</label>
+                    {error && <div className="error">{error}</div>}
                     </div>
                     <button type="submit"
                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
