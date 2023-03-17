@@ -39,7 +39,9 @@ function FileUploadForm() {
         }
         formData.append('file', file);
         if (enableParallel) {
-            formData.append('enableParallel', 'true')
+            formData.append('enableParallel', 'True')
+        } else {
+            formData.append('enableParallel','False')
         }
 
         try {

@@ -5,6 +5,7 @@ import pandas as pd
 from anytree import Node
 from joblib import Parallel, delayed
 
+
 # TODO: Add later on more ways to read data such as tsv, json, database etc.
 def read_data(filename):
     return pd.read_csv(filename, dtype=str)
@@ -305,13 +306,13 @@ def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/dirty.csv")
     # dataframe = read_data("../resources/json_dumps/dirty.csv")
-    dataframe = read_data("../resources/json_dumps/pima-indians-diabetes.csv")
+    # dataframe = read_data("../resources/json_dumps/pima-indians-diabetes.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
-    # dataframe = read_data("../resources/json_dumps/" + file.filename)
+    dataframe = read_data("../resources/json_dumps/" + file.filename)
     output = {}
 
-    if multiprocess_switch:
+    if multiprocess_switch == "True":
         output = {}
         results = Parallel(n_jobs=-1)(
             delayed(process_column)(column, dataframe) for column in dataframe.columns
