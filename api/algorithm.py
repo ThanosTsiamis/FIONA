@@ -294,6 +294,9 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     return col_outliers_and_patterns
 
 
+def process_column(column, dataframe):
+    return add_outlying_elements_to_attribute(column, dataframe)
+
 def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/dirty.csv")
@@ -303,10 +306,14 @@ def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/json_dumps/" + file.filename)
     output = {}
 
-    # FIXME LATER
-    if False:
-        output = Parallel(n_jobs=-1)(
-            delayed(add_outlying_elements_to_attribute)(column, dataframe) for column in dataframe.columns)
+    if multiprocess_switch:
+        output = {}
+        results = Parallel(n_jobs=-1)(
+            delayed(process_column)(column, dataframe) for column in dataframe.columns
+        )
+
+        for res in results:
+            output.update(res)
     else:
         for column in dataframe.columns:
             # column = "sched_dep_time"
