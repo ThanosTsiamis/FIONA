@@ -936,10 +936,10 @@ tuple_id,src,flight,sched_dep_time,act_dep_time,sched_arr_time,act_arr_time
 935,flightarrival,UA-2906-PHL-MCO,3:50 p.m.,4:46 p.m.,6:23 p.m.,6:36 p.m.
 936,flightarrival,UA-938-DEN-ORD,,4:37 p.m.,,7:26 p.m.
 937,flightarrival,AA-1221-MCO-ORD,8:00 p.m.,,9:45 p.m.,
-938,flightarrival,CO-16-LAX-EWR,10:25 a.m.,,6:44 p.m.,
+AAA,flightarrival,CO-16-LAX-EWR,10:25 a.m.,,6:44 p.m.,
 939,flightarrival,UA-2515-DFW-CLT,,7:31 a.m.,,10:45 a.m.
 940,flightarrival,AA-400-DFW-JFK,10:40 a.m.,11:02 a.m.,2:59 p.m.,2:52 p.m.
-941,flightarrival,UA-664-ORD-PHL,1:33 p.m.,1:48 p.m.,4:31 p.m.,4:18 p.m.
+941,9999999,UA-664-ORD-PHL,1:33 p.m.,1:48 p.m.,4:31 p.m.,4:18 p.m.
 942,flightarrival,UA-37-EWR-MCO,1:29 p.m.,1:48 p.m.,4:17 p.m.,4:17 p.m.
 943,flightarrival,UA-233-LAX-JFK,4:25 p.m.,4:28 p.m. (Estimated runway),12:29 a.m.,12:01 a.m. (Estimated runway)
 944,flightarrival,AA-2312-DFW-DTW,8:25 p.m.,8:29 p.m. (Estimated runway),11:50 p.m.,11:35 p.m. (Estimated runway)

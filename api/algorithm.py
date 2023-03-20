@@ -193,20 +193,19 @@ def score_function(leaves: tuple):
     return matrix
 
 
-# TODO: Fix here not completely correct check notes
-def partial_derivative(odd_case: bool, alpha_list: list, beta_list: list, gamma_list: list):
-    if odd_case:
-        alpha_partial_derivative = (1 / beta_list[0]) * (1 / gamma_list[0])
-        beta_partial_derivative = -alpha_list[0] / ((beta_list[0] ** 2) * gamma_list[0])
-        gamma_partial_derivative = -alpha_list[0] / ((gamma_list[0] ** 2) * beta_list[0])
-    else:
-        alpha_partial_derivative = 0.5 * ((1 / (beta_list[0] * gamma_list[0])) + (1 / (beta_list[1] * gamma_list[1])))
-        beta_partial_derivative = -0.5 * ((alpha_list[0] / (gamma_list[0] * (beta_list[0] ** 2))) + (
-                alpha_list[1] / (gamma_list[1] * (beta_list[1] ** 2))))
-        gamma_partial_derivative = -0.5 * ((alpha_list[0] / (beta_list[0] * (gamma_list[0] ** 2))) + (
-                alpha_list[1] / (beta_list[1] * (gamma_list[1] ** 2))))
-    return alpha_partial_derivative, beta_partial_derivative, gamma_partial_derivative
-
+# # TODO: Fix here not completely correct check notes
+# def partial_derivative(odd_case: bool, alpha_list: list, beta_list: list, gamma_list: list):
+#     if odd_case:
+#         alpha_partial_derivative = (1 / beta_list[0]) * (1 / gamma_list[0])
+#         beta_partial_derivative = -alpha_list[0] / ((beta_list[0] ** 2) * gamma_list[0])
+#         gamma_partial_derivative = -alpha_list[0] / ((gamma_list[0] ** 2) * beta_list[0])
+#     else:
+#         alpha_partial_derivative = 0.5 * ((1 / (beta_list[0] * gamma_list[0])) + (1 / (beta_list[1] * gamma_list[1])))
+#         beta_partial_derivative = -0.5 * ((alpha_list[0] / (gamma_list[0] * (beta_list[0] ** 2))) + (
+#                 alpha_list[1] / (gamma_list[1] * (beta_list[1] ** 2))))
+#         gamma_partial_derivative = -0.5 * ((alpha_list[0] / (beta_list[0] * (gamma_list[0] ** 2))) + (
+#                 alpha_list[1] / (beta_list[1] * (gamma_list[1] ** 2))))
+#     return alpha_partial_derivative, beta_partial_derivative, gamma_partial_derivative
 
 def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     column = attribute_to_process
@@ -246,10 +245,11 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
             pattern_indices_dict[threshold] = pattern_indices
             lower_outlying_indices_dict[threshold] = lower_outlying_indices
             for i in pattern_indices:
-                element_dict_patterns[leaves[i[0]].data[:, 0][0]] = leaves[i[0]].data.shape[0]
-            # instead of the value here put a dict with the patterns
+                uniques, counts = (np.unique(leaves[i[0]].data[:, 0], return_counts=True))
+                element_dict_patterns[leaves[i[0]].name] = dict(np.asarray((uniques, counts)).T)
             for j in lower_outlying_indices:
-                element_dict_outliers[leaves[j[0]].data[:, 0][0]] = leaves[j[0]].data.shape[0]
+                uniques, counts = (np.unique(leaves[j[0]].data[:, 0], return_counts=True))
+                element_dict_outliers[leaves[j[0]].name] = dict(np.asarray((uniques, counts)).T)
             outlying_elements[threshold] = element_dict_outliers
             pattern_elements[threshold] = element_dict_patterns
     output_dictionary["outliers"] = outlying_elements
@@ -278,24 +278,28 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     #                                                          gamma_list=specific_gammas)
     # print(" ")
 
-    # return jsonify(upper_outlying_indices_dict,lower_outlying_indices_dict)
-
-    # if lower_outlying_indices.shape[0] == 0 and lower_outlying_indices.shape[0] == 0:
-    #     print("NOTHING TO REPORT for the column " + column)
-    # else:
-    #     print("Report outliers for the column " + column)
-    #     for i in upper_outlying_indices:
-    #         element, count = np.unique(leaves[i[0]].data[:, 0], return_counts=True)
-    #         print(str(element) + " appears " + str(count) + " times")
-    #     for j in lower_outlying_indices:
-    #         element, count = np.unique(leaves[j[0]].data[:, 0], return_counts=True)
-    #         print(str(element) + " appears " + str(count) + " times")
-
 
 def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
-    col_outliers_and_patterns = {str(column): process_attribute(column, dataframe)}
+    col_outliers_and_patterns = process_attribute(column, dataframe)
+    lexicon = {}
+    for threshold_level in col_outliers_and_patterns['outliers'].keys():
+        lexicon[threshold_level] = {}
+        inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
+        pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
+        # TODO: Keep here the repeating patterns
+        for outlier_rep in col_outliers_and_patterns['outliers'][threshold_level].keys():
+            first_outliers_element = list(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])[0]
+            generalised_pattern = generalise_string(first_outliers_element)
+            if generalised_pattern in pattern_set:
+                continue
+            else:
+                # Add the outlier pattern as the key and the values as the dict with the occuences as the values
+                inner_dict = lexicon[threshold_level].get(generalised_pattern, {})
+                inner_dict.update(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])
+                lexicon[threshold_level][generalised_pattern] = inner_dict
+
     print("Finished " + column)
-    return col_outliers_and_patterns
+    return lexicon
 
 
 def process_column(column, dataframe):
@@ -304,12 +308,13 @@ def process_column(column, dataframe):
 
 def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
-    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/dirty.csv")
+    dataframe = read_data("../resources/datasets/datasets_testing_purposes/dirty.csv")
     # dataframe = read_data("../resources/json_dumps/dirty.csv")
     # dataframe = read_data("../resources/json_dumps/pima-indians-diabetes.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
+    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
-    dataframe = read_data("../resources/json_dumps/" + file.filename)
+    # dataframe = read_data("../resources/json_dumps/" + file.filename)
     output = {}
 
     if multiprocess_switch == "True":
