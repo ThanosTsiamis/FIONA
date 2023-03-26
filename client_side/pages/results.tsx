@@ -37,17 +37,14 @@ const ResultsPage = () => {
 
     return (
         <div>
-            <b>Click on the Appropriate Attribute</b>
-            <ul>
+            <b>Select from the dropdown the Appropriate Attribute</b>
+            <select value={selectedKey} onChange={(e) => setSelectedKey(e.target.value)}>
                 {headers.map((outerKey) => (
-                    <li key={outerKey}>
-                        <button type="button" onClick={() => setSelectedKey(outerKey)}
-                                className={outerKey === selectedKey ? 'active' : ''}>
-                            {outerKey}
-                        </button>
-                    </li>
+                    <option key={outerKey} value={outerKey}>
+                        {outerKey}
+                    </option>
                 ))}
-            </ul>
+            </select>
             {Object.keys(data).length > 0 && (
                 <table>
                     <thead>
