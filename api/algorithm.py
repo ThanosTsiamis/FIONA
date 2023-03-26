@@ -1,5 +1,3 @@
-import time
-
 import numpy as np
 import pandas as pd
 from anytree import Node
@@ -52,8 +50,11 @@ def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
     :return: The set of the distinct possible options on which the root algorithm will split upon.
     """
     if specificity_level == -2:
-        res = [i for n, i in enumerate(df[:, 1]) if i not in df[:, 1][:n]]
-        return res
+        hash_values = np.array([hash(frozenset(s)) for s in df[:, 1]])
+        unique_hash_values, inverse_indices = np.unique(hash_values, return_inverse=True)
+        hash_table = {h: set(s) for h, s in zip(unique_hash_values, df[:, 1][inverse_indices])}
+        unique_sets = np.array([hash_table[h] for h in unique_hash_values])
+        return unique_sets
     elif specificity_level == -1:
         length = np.vectorize(len)
         result = set(length(df)[:, 0])
@@ -168,7 +169,6 @@ def score_function(leaves: tuple):
 
     # TODO: Maybe parallelise it here?
     for i in range(len(leaves)):
-        z = time.time()
         for j in range(i, len(leaves)):
             if i == j:
                 matrix[0][i][j] = 0
@@ -181,7 +181,6 @@ def score_function(leaves: tuple):
 
             masses_difference = abs(leaves[i].data.shape[0] - leaves[j].data.shape[0]) + 1
             matrix[2][i][j] = masses_difference
-        print("loops in " + str(time.time() - z))
 
     outcome = np.divide(matrix[0], matrix[1], out=np.zeros_like(matrix[0]), where=matrix[1] != 0)
     outcome = outcome + outcome.T
@@ -192,20 +191,6 @@ def score_function(leaves: tuple):
     matrix[0] = matrix[0] + matrix[0].T
     return matrix
 
-
-# # TODO: Fix here not completely correct check notes
-# def partial_derivative(odd_case: bool, alpha_list: list, beta_list: list, gamma_list: list):
-#     if odd_case:
-#         alpha_partial_derivative = (1 / beta_list[0]) * (1 / gamma_list[0])
-#         beta_partial_derivative = -alpha_list[0] / ((beta_list[0] ** 2) * gamma_list[0])
-#         gamma_partial_derivative = -alpha_list[0] / ((gamma_list[0] ** 2) * beta_list[0])
-#     else:
-#         alpha_partial_derivative = 0.5 * ((1 / (beta_list[0] * gamma_list[0])) + (1 / (beta_list[1] * gamma_list[1])))
-#         beta_partial_derivative = -0.5 * ((alpha_list[0] / (gamma_list[0] * (beta_list[0] ** 2))) + (
-#                 alpha_list[1] / (gamma_list[1] * (beta_list[1] ** 2))))
-#         gamma_partial_derivative = -0.5 * ((alpha_list[0] / (beta_list[0] * (gamma_list[0] ** 2))) + (
-#                 alpha_list[1] / (beta_list[1] * (gamma_list[1] ** 2))))
-#     return alpha_partial_derivative, beta_partial_derivative, gamma_partial_derivative
 
 def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     column = attribute_to_process
@@ -221,19 +206,16 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     outlying_elements = {}
     pattern_elements = {}
 
-    threshold_values = np.linspace(51, 100, 2500)
+    threshold_values = np.linspace(1, 50, 2500)
     previous_values = [-1, -1]
     pattern_indices_dict = {}
     lower_outlying_indices_dict = {}
     for threshold in threshold_values:
         element_dict_outliers = {}
         element_dict_patterns = {}
-
-        pattern_threshold = np.percentile(medians - median_of_medians, threshold)
-        outlier_threshold = np.percentile(medians - median_of_medians, 100 - threshold)
-
-        pattern_indices = np.argwhere(medians - median_of_medians > pattern_threshold)
-        lower_outlying_indices = np.argwhere(medians - median_of_medians < outlier_threshold)
+        outlier_threshold = np.percentile(medians, threshold)
+        lower_outlying_indices = np.argwhere(medians < outlier_threshold)
+        pattern_indices = np.argwhere(medians > outlier_threshold)
 
         if pattern_indices.shape[0] == previous_values[0] and lower_outlying_indices.shape[0] == previous_values[1]:
             continue
@@ -256,47 +238,23 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     output_dictionary["patterns"] = pattern_elements
     return output_dictionary
 
-    # add here the explanation of the results
-    # TODO: fix here and put dict
-    # for index in upper_outlying_indices:
-    #     median = medians[index]
-    #     alpha = matrices_packet[0][:][index]
-    #     beta = matrices_packet[1][:][index]
-    #     gamma = matrices_packet[2][:][index]
-    #     score = score_matrix[index]
-    #     dif = abs(score - median)
-    #     indices_of_median = np.where(dif == dif.min())[1]
-    #
-    #     specific_alphas = alpha[0][indices_of_median]
-    #     specific_betas = beta[0][indices_of_median]
-    #     specific_gammas = gamma[0][indices_of_median]
-    #
-    #     # Here start doing the partial derivative
-    #     # TODO fix the partial derivative
-    #     partial_a, partial_b, partial_c = partial_derivative(oddCase=True, alpha_list=specific_alphas,
-    #                                                          beta_list=specific_betas,
-    #                                                          gamma_list=specific_gammas)
-    # print(" ")
-
 
 def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     col_outliers_and_patterns = process_attribute(column, dataframe)
-    lexicon = {}
+    lexicon = {column: {}}
     for threshold_level in col_outliers_and_patterns['outliers'].keys():
-        lexicon[threshold_level] = {}
+        lexicon[column][threshold_level] = {}
         inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
         pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
-        # TODO: Keep here the repeating patterns
         for outlier_rep in col_outliers_and_patterns['outliers'][threshold_level].keys():
             first_outliers_element = list(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])[0]
             generalised_pattern = generalise_string(first_outliers_element)
             if generalised_pattern in pattern_set:
                 continue
             else:
-                # Add the outlier pattern as the key and the values as the dict with the occuences as the values
-                inner_dict = lexicon[threshold_level].get(generalised_pattern, {})
+                inner_dict = lexicon[column][threshold_level].get(generalised_pattern, {})
                 inner_dict.update(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])
-                lexicon[threshold_level][generalised_pattern] = inner_dict
+                lexicon[column][threshold_level][generalised_pattern] = inner_dict
 
     print("Finished " + column)
     return lexicon
@@ -308,8 +266,9 @@ def process_column(column, dataframe):
 
 def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
-    dataframe = read_data("../resources/datasets/datasets_testing_purposes/dirty.csv")
+    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/dirty.csv")
     # dataframe = read_data("../resources/json_dumps/dirty.csv")
+    dataframe = read_data("../resources/json_dumps/School_Learning_Modalities__2020-2021.csv")
     # dataframe = read_data("../resources/json_dumps/pima-indians-diabetes.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
@@ -327,7 +286,6 @@ def process(file: str, multiprocess_switch):
             output.update(res)
     else:
         for column in dataframe.columns:
-            # column = "Number of times pregnant"
-            output.update(add_outlying_elements_to_attribute(column, dataframe))
-            print("123123")
+            if column != "fnlwgt":
+                output.update(add_outlying_elements_to_attribute(column, dataframe))
     return output
