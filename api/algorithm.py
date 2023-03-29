@@ -50,10 +50,14 @@ def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
     :return: The set of the distinct possible options on which the root algorithm will split upon.
     """
     if specificity_level == -2:
-        hash_values = np.array([hash(frozenset(s)) for s in df[:, 1]])
-        unique_hash_values, inverse_indices = np.unique(hash_values, return_inverse=True)
-        hash_table = {h: set(s) for h, s in zip(unique_hash_values, df[:, 1][inverse_indices])}
-        unique_sets = np.array([hash_table[h] for h in unique_hash_values])
+        unique_sets = []
+        hash_table = {}
+        for s in df[:, 1]:
+            s_set = set(s)
+            hash_val = hash(frozenset(s_set))
+            if hash_val not in hash_table:
+                hash_table[hash_val] = s_set
+                unique_sets.append(s_set)
         return unique_sets
     elif specificity_level == -1:
         length = np.vectorize(len)
@@ -134,20 +138,22 @@ def calculate_penalty(specificity_level: int, penalty: int):
 def node_distance(node1: Node, node2: Node, penalty: int):
     sameClass = node1.data[:, 1][0] == node2.data[:, 1][0]
     sameLength = len(node1.data[:, 0][0]) == len(node2.data[:, 0][0])
+    specificity_sum = node1.specificity_level + node2.specificity_level
     if sameClass:
         if sameLength:
-            for char_pos in range(len(node1.data[0, 0])):
-                if node1.data[0, 0][char_pos] == node2.data[0, 0][char_pos]:
-                    continue
-                else:
-                    break
-            return node1.specificity_level + node2.specificity_level - 2 * char_pos
+            str1 = node1.data[0, 0]
+            str2 = node2.data[0, 0]
+            if str1 and str2:
+                char_pos = np.argmax(np.array(list(str1)) != np.array(list(str2)))
+                return specificity_sum - 2 * char_pos
+            else:
+                return specificity_sum + 2
         else:
-            # add the specificity levels  +2
-            return node1.specificity_level + node2.specificity_level + 2
+            return specificity_sum + 2
     else:
-        return node1.specificity_level + node2.specificity_level + 4 + calculate_penalty(
-            node1.specificity_level, penalty=penalty) + calculate_penalty(node2.specificity_level, penalty=penalty)
+        penalty_sum = calculate_penalty(node1.specificity_level, penalty=penalty) + calculate_penalty(
+            node2.specificity_level, penalty=penalty)
+        return specificity_sum + 4 + penalty_sum
 
 
 def score_function(leaves: tuple):
@@ -239,9 +245,33 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     return output_dictionary
 
 
+def compare_dicts(dict1, dict2):
+    # Check if both dictionaries have the same keys
+    if set(dict1.keys()) != set(dict2.keys()):
+        return False
+
+    # Iterate through each key in the dictionary
+    for key in dict1.keys():
+        # Check if the value for the key is another dictionary
+        if isinstance(dict1[key], dict) and isinstance(dict2[key], dict):
+            # Recursively check if the nested dictionaries are the same
+            if not compare_dicts(dict1[key], dict2[key]):
+                return False
+        else:
+            # Check if the values for the key are the same
+            if dict1[key] != dict2[key]:
+                return False
+
+    # If all key-value pairs match, return True
+    return True
+
+
 def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     col_outliers_and_patterns = process_attribute(column, dataframe)
     lexicon = {column: {}}
+    has_previous_threshold_dict = False
+    previous_threshold_dict_value = -1
+    marked_for_clearance = []
     for threshold_level in col_outliers_and_patterns['outliers'].keys():
         lexicon[column][threshold_level] = {}
         inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
@@ -255,6 +285,15 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
                 inner_dict = lexicon[column][threshold_level].get(generalised_pattern, {})
                 inner_dict.update(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])
                 lexicon[column][threshold_level][generalised_pattern] = inner_dict
+        if has_previous_threshold_dict:
+            current_dict = lexicon[column][threshold_level]
+            previous_dict = lexicon[column][previous_threshold_dict_value]
+            if compare_dicts(current_dict, previous_dict):
+                marked_for_clearance.append(threshold_level)
+        has_previous_threshold_dict = True
+        previous_threshold_dict_value = threshold_level
+    for threshold_level in marked_for_clearance:
+        del lexicon[column][threshold_level]
 
     print("Finished " + column)
     return lexicon
@@ -268,12 +307,12 @@ def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/dirty.csv")
     # dataframe = read_data("../resources/json_dumps/dirty.csv")
-    dataframe = read_data("../resources/json_dumps/School_Learning_Modalities__2020-2021.csv")
+    # dataframe = read_data("../resources/json_dumps/School_Learning_Modalities__2020-2021.csv")
     # dataframe = read_data("../resources/json_dumps/pima-indians-diabetes.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
-    # dataframe = read_data("../resources/json_dumps/" + file.filename)
+    dataframe = read_data("../resources/json_dumps/" + file.filename)
     output = {}
 
     if multiprocess_switch == "True":
@@ -286,6 +325,6 @@ def process(file: str, multiprocess_switch):
             output.update(res)
     else:
         for column in dataframe.columns:
-            if column != "fnlwgt":
+            if column != "tuple_id":
                 output.update(add_outlying_elements_to_attribute(column, dataframe))
     return output

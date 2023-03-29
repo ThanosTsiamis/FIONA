@@ -32,12 +32,10 @@ def fetch(filename):
 
 
 if __name__ == "__main__":
-    # app.run(host="0.0.0.0", debug=True)
-    t = time.time()
+    app.run(host="0.0.0.0", debug=False)
     filename = "../json_dumps/dirty.csv"
     multiprocess = "False"
     big_dict = process(filename, multiprocess)
     json_serialised = json.dumps(big_dict)
     with open("../resources/json_dumps/" + "jhjhbjhbhj.json", "w") as outfile:
         outfile.write(json_serialised)
-    print(time.time() - t)

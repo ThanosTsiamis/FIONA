@@ -1,12 +1,12 @@
 tuple_id,src,flight,sched_dep_time,act_dep_time,sched_arr_time,act_arr_time
 1,aa,AA-3859-IAH-ORD,7:10 a.m.,7:16 a.m.,9:40 a.m.,9:32 a.m.
-2,aa,AA-1733-ORD-PHX,7:45 p.m.,7:58 p.m.,10:30 p.m.,
-3,aa,AA-1640-MIA-MCO,6:30 p.m.,,7:25 p.m.,
-4,aa,AA-518-MIA-JFK,6:40 a.m.,6:54 a.m.,9:25 a.m.,9:28 a.m.
-5,aa,AA-3756-ORD-SLC,12:15 p.m.,12:41 p.m.,2:45 p.m.,2:50 p.m.
-6,aa,AA-204-LAX-MCO,11:25 p.m.,,12/02/2011 6:55 a.m.,
-7,aa,AA-3468-CVG-MIA,7:00 a.m.,7:25 a.m.,9:55 a.m.,9:45 a.m.
-8,aa,AA-484-DFW-MIA,4:15 p.m.,4:29 p.m.,7:55 p.m.,7:39 p.m.
+2,aa,AA-1733-ORD-PHX,70:45 p.m.,7:58 p.m.,10:30 p.m.,
+3,aa,AA-1640-MIA-MCO,10:70 p.m.,,7:25 p.m.,
+4,aa,AA-518-MIA-JFK,13:13 a.m.,6:54 a.m.,9:25 a.m.,9:28 a.m.
+5,aa,AA-3756-ORD-SLC,12:12 p.m.,12:41 p.m.,2:45 p.m.,2:50 p.m.
+6,aa,AA-204-LAX-MCO,11:11 p.m.,,12/02/2011 6:55 a.m.,
+7,aa,AA-3468-CVG-MIA,9:99 a.m.,7:25 a.m.,9:55 a.m.,9:45 a.m.
+8,aa,AA-484-DFW-MIA,6:62 p.m.,4:29 p.m.,7:55 p.m.,7:39 p.m.
 9,aa,AA-446-DFW-PHL,11:50 a.m.,12:12 p.m.,3:50 p.m.,4:09 p.m.
 10,aa,AA-466-IAH-MIA,6:00 a.m.,6:08 a.m.,9:20 a.m.,9:05 a.m.
 11,aa,AA-1886-BOS-MIA,10:45 a.m.,10:55 a.m.,2:20 p.m.,1:40 p.m.
@@ -41,7 +41,7 @@ tuple_id,src,flight,sched_dep_time,act_dep_time,sched_arr_time,act_arr_time
 40,aa,AA-1917-JFK-MCO,2:55 p.m.,3:27 p.m.,5:55 p.m.,5:43 p.m.
 41,aa,AA-2268-PHX-ORD,7:15 a.m.,7:22 a.m.,11:35 a.m.,11:06 a.m.
 42,aa,AA-4277-CVG-JFK,12:10 p.m.,12:10 p.m.,2:15 p.m.,1:43 p.m.
-43,aa,AA-789-ORD-DEN,1:05 p.m.,1:19 p.m.,2:35 p.m.,3:13 p.m.
+43,aa,AA-789-ORD-DEN,1:05 p.m.,6:66 p.m.,2:35 p.m.,3:13 p.m.
 44,aa,AA-415-BOS-ORD,8:35 a.m.,8:56 a.m.,10:40 a.m.,10:16 a.m.
 45,aa,AA-85-JFK-SFO,3:05 p.m.,3:36 p.m.,6:30 p.m.,6:43 p.m.
 46,aa,AA-1544-SAN-ORD,11:25 a.m.,11:40 a.m.,5:25 p.m.,4:56 p.m.
@@ -417,7 +417,7 @@ tuple_id,src,flight,sched_dep_time,act_dep_time,sched_arr_time,act_arr_time
 416,airtravelcenter,UA-62-IAH-EWR,2:30 p.m.,,7:03 p.m.,
 417,airtravelcenter,UA-1500-IAH-GUA,8:55 a.m.,,11:45 a.m.,
 418,airtravelcenter,AA-3804-PHL-ORD,,2:44 p.m.,,3:36 p.m.
-419,airtravelcenter,AA-1917-JFK-MCO,,3:28 p.m.,,5:39 p.m.
+419,suzuki,AA-1917-JFK-MCO,,3:28 p.m.,,5:39 p.m.
 420,airtravelcenter,AA-2268-PHX-ORD,,7:22 a.m.,,11:04 a.m.
 421,airtravelcenter,AA-4277-CVG-JFK,,12:11 p.m.,,1:42 p.m.
 422,airtravelcenter,AA-2957-DFW-CVG,,8:04 a.m.,,10:58 a.m.
@@ -442,12 +442,12 @@ tuple_id,src,flight,sched_dep_time,act_dep_time,sched_arr_time,act_arr_time
 441,flightview,UA-397-JFK-SFO,8:00 a.m.,8:49 a.m.,11:55 a.m.,11:58 a.m.
 442,flightview,UA-3925-IAD-ORF,,9:01 a.m.,,9:43 a.m.
 443,flightview,AA-1733-ORD-PHX,7:45 p.m.,7:59 p.m.,10:30 p.m.,
-444,flightview,AA-3-JFK-LAX,12:00 p.m.,12:12 p.m.,3:15 p.m.,3:16 p.m.
+444,rainbow,AA-3-JFK-LAX,12:00 p.m.,12:12 p.m.,3:15 p.m.,3:16 p.m.
 445,flightview,UA-2830-MCO-CLT,3:27 p.m.,3:50 p.m.,5:05 p.m.,5:17 p.m.
-446,flightview,CO-58-DEN-IAH,,12:37 p.m.,,3:31 p.m.
+446,sun,CO-58-DEN-IAH,,12:37 p.m.,,3:31 p.m.
 447,flightview,UA-5487-SFO-MRY,,10:53 a.m.,,11:21 a.m.
 448,flightview,AA-204-LAX-MCO,11:25 p.m.,,6:55 a.m. Dec 02,
-449,flightview,UA-414-LAX-SFO,,6:10 a.m.,,7:17 a.m.
+449,blue,UA-414-LAX-SFO,,6:10 a.m.,,7:17 a.m.
 450,flightview,CO-1614-LAX-IAH,,12:58 a.m.,,5:26 a.m.
 451,flightview,UA-2726-FLL-PHL,4:00 p.m.,4:10 p.m.,6:46 p.m.,6:25 p.m.
 452,flightview,CO-52-IAH-LAX,,7:56 a.m.,,9:09 a.m.
@@ -838,15 +838,15 @@ tuple_id,src,flight,sched_dep_time,act_dep_time,sched_arr_time,act_arr_time
 837,flights,CO-1023-IAH-DEN,,11:56 a.m.,,1:14 p.m.
 838,flights,AA-466-IAH-MIA,6:00 a.m.,6:08 a.m.,9:20 a.m.,9:05 a.m.
 839,flights,UA-3050-PHX-CLT,11:05 a.m.,11:30 a.m.,4:57 p.m.,5:05 p.m.
-840,flights,CO-89-IAH-EWR,,6:02 a.m.,,10:27 a.m.
+840,flights,CO-89-IAH,,6:02 a.m.,,10:27 a.m.
 841,flights,CO-1088-CLE-IAH,,8:40 a.m.,,10:56 a.m.
-842,flights,AA-1664-MIA-ATL,10:15 a.m.,10:18 a.m.,12:10 p.m.,11:56 a.m.
+842,subaka,AA-1664-MIA-ATL,10:15 a.m.,10:18 a.m.,12:10 p.m.,11:56 a.m.
 843,flights,AA-1279-DFW-PHX,1:00 p.m.,2:04 p.m.,2:35 p.m.,3:20 p.m. (Runway)
 844,flights,UA-854-SFO-IAH,,7:49 a.m.,,1:30 p.m.
-845,flights,UA-382-IAD-LAX,,12:35 p.m.,,3:21 p.m.
+845,AAA,UA-382-IAD-LAX,,12:35 p.m.,,3:21 p.m.
 846,flights,AA-4344-ORD-DTW,,12:13 p.m.,,2:10 p.m.
 847,flights,UA-257-JFK-SFO,2:30 p.m.,2:26 p.m.,6:15 p.m.,5:42 p.m.
-848,flights,UA-2945-PHL-CLT,12:00 p.m.,11:51 a.m.,1:45 p.m.,1:15 p.m.
+848,karpouzi,UA-2945-PHL-CLT,12:00 p.m.,11:51 a.m.,1:45 p.m.,1:15 p.m.
 849,flights,CO-63-EWR-IAH,,5:22 p.m.,,8:03 p.m.
 850,flights,CO-47-IAH-LAX,,8:25 p.m.,,8:56 p.m.
 851,flights,AA-2050-ORD-MIA,10:40 a.m.,11:05 a.m.,2:45 p.m.,2:46 p.m.
@@ -936,8 +936,8 @@ tuple_id,src,flight,sched_dep_time,act_dep_time,sched_arr_time,act_arr_time
 935,flightarrival,UA-2906-PHL-MCO,3:50 p.m.,4:46 p.m.,6:23 p.m.,6:36 p.m.
 936,flightarrival,UA-938-DEN-ORD,,4:37 p.m.,,7:26 p.m.
 937,flightarrival,AA-1221-MCO-ORD,8:00 p.m.,,9:45 p.m.,
-AAA,flightarrival,CO-16-LAX-EWR,10:25 a.m.,,6:44 p.m.,
-939,flightarrival,UA-2515-DFW-CLT,,7:31 a.m.,,10:45 a.m.
+938,flightarrival,CO-16-LAX-EWR,10:25 a.m.,,6:44 p.m.,
+AAAAA,Potatoes,XXX-XXX-XXX-XXX,00:00 p.m.,7:31 a.m.,01/10/1000 ,10:45 a.m.
 940,flightarrival,AA-400-DFW-JFK,10:40 a.m.,11:02 a.m.,2:59 p.m.,2:52 p.m.
 941,9999999,UA-664-ORD-PHL,1:33 p.m.,1:48 p.m.,4:31 p.m.,4:18 p.m.
 942,flightarrival,UA-37-EWR-MCO,1:29 p.m.,1:48 p.m.,4:17 p.m.,4:17 p.m.
