@@ -49,13 +49,13 @@ const ResultsPage = () => {
                 <table>
                     <thead>
                     <tr>
-                        <th>Threshold Level</th>
+                        <th>System's Decision Making Confidence (%)</th>
                         <th>Occurrences</th>
                     </tr>
                     </thead>
                     <tbody>
                     {Object.keys(data[selectedKey])
-                        .sort((a, b) => toNumber(a) - toNumber(b)) // Sort innerKeys by numeric order
+                        .sort((a, b) => toNumber(a) - toNumber(b))
                         .map((innerKey, index, array) => {
                             const current = data[selectedKey][innerKey];
                             const previous = index > 0 ? data[selectedKey][array[index - 1]] : {};
@@ -71,14 +71,18 @@ const ResultsPage = () => {
                                 return null;
                             }
 
+                            const threshold = (100 - toNumber(innerKey)); // Convert threshold to 100-threshold
+
                             return (
                                 <tr key={innerKey}>
                                     <td colSpan={1} style={{
                                         borderTop: '1px solid black',
                                         borderRight: '1px solid black'
-                                    }}>{innerKey}</td>
+                                    }}>{threshold}</td>
                                     <td colSpan={2}
-                                        style={{borderTop: '1px solid black'}}>{JSON.stringify(occurrences)}</td>
+                                        style={{borderTop: '1px solid black'}}>
+                                        <pre>{JSON.stringify(occurrences, null, 4)}</pre>
+                                    </td>
                                 </tr>
                             );
                         })}
