@@ -312,7 +312,7 @@ def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
-    dataframe = read_data("../resources/json_dumps/" + file.filename)
+    dataframe = read_data("resources/json_dumps/" + file.filename)
     output = {}
 
     if multiprocess_switch == "True":
