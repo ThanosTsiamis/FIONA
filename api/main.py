@@ -1,5 +1,5 @@
 import json
-import time
+import os
 
 from flask import Flask, request, jsonify, redirect
 
@@ -24,9 +24,24 @@ def upload_file():
 
 @app.route("/api/fetch/<string:filename>", methods=['GET'])
 def fetch(filename):
-    with open("resources/json_dumps/" + filename + ".json") as f:
-        data = json.load(f)
+    if filename.endswith(".json"):
+        with open("resources/json_dumps/" + filename) as f:
+            data = json.load(f)
+    else:
+        with open("resources/json_dumps/" + filename + ".json") as f:
+            data = json.load(f)
     response = jsonify(data)
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
+
+
+@app.route("/api/history", methods=['GET'])
+def get_json_files():
+    json_files = []
+    for file in os.listdir('resources/json_dumps'):
+        if file.endswith('.json'):
+            json_files.append(file)
+    response = jsonify(json_files)
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 

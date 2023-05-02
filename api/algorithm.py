@@ -1,12 +1,21 @@
+import gc
+
 import numpy as np
 import pandas as pd
 from anytree import Node
 from joblib import Parallel, delayed
 
 
-# TODO: Add later on more ways to read data such as tsv, json, database etc.
 def read_data(filename):
-    return pd.read_csv(filename, dtype=str)
+    file_extension = filename.split(".")[-1]
+    if file_extension == "csv":
+        return pd.read_csv(filename, dtype=str)
+    elif file_extension == "xlsx":
+        return pd.read_excel(filename)
+    elif file_extension == "json":
+        return pd.read_json(filename)
+    else:
+        return print("DATABASE NOT YET SUPPORTED")
 
 
 def process_data(dataframe: pd.DataFrame):
@@ -170,7 +179,12 @@ def score_function(leaves: tuple):
     """
     # Order is depth,height,width
     max_depth = max([leaf.depth for leaf in leaves])
-    matrix = np.empty([4, len(leaves), len(leaves)], dtype='float64')
+    try:
+        gc.collect()
+        matrix = np.empty([4, len(leaves), len(leaves)], dtype='float64')
+    except:
+        gc.collect()
+        matrix = np.empty([4, len(leaves), len(leaves)], dtype='float64')
     matrix.fill(0)
 
     # TODO: Maybe parallelise it here?
@@ -203,16 +217,15 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     attribute = process_data(pd.DataFrame(dataframe[column]))
     root = tree_grow(attribute)
     leaves = root.leaves
-    # graph.add_nodes_from(leaves)
+    print(attribute)
     matrices_packet = score_function(leaves)
     score_matrix = matrices_packet[3]
     medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
-    median_of_medians = np.median(medians)
     output_dictionary = {}
     outlying_elements = {}
     pattern_elements = {}
 
-    threshold_values = np.linspace(1, 50, 2500)
+    threshold_values = np.linspace(1, 99, 5000)
     previous_values = [-1, -1]
     pattern_indices_dict = {}
     lower_outlying_indices_dict = {}
@@ -305,7 +318,7 @@ def process_column(column, dataframe):
 
 def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
-    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/dirty.csv")
+    # dataframe = read_data("resources/datasets/datasets_testing_purposes/dirty.csv")
     # dataframe = read_data("../resources/json_dumps/dirty.csv")
     # dataframe = read_data("../resources/json_dumps/School_Learning_Modalities__2020-2021.csv")
     # dataframe = read_data("../resources/json_dumps/pima-indians-diabetes.csv")
