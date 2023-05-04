@@ -20,7 +20,7 @@ function FileUploadForm() {
             return;
         }
         const fileSizeInMb = file.size / (1024 * 1024);
-        const maxFileSizeInMb = 3.5;
+        const maxFileSizeInMb = 3;
 
         if (fileSizeInMb > maxFileSizeInMb) {
             setError('File is too large to be previewed on screen and will slow down your computer');
@@ -77,7 +77,8 @@ function FileUploadForm() {
             <Head>
                 <title>FIONA</title>
             </Head>
-            <h1 className="mb-4 ml-10 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-1xl lg:text-5xl dark:text-white">FIONA: Categorical Outlier
+            <h1 className="mb-4 ml-10 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-1xl lg:text-5xl dark:text-white">FIONA:
+                Categorical Outlier
                 Detector</h1>
             <p className="mb-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">Discover
                 hidden insights and unlock the true potential of your data with our cutting-edge categorical outlier
@@ -94,7 +95,7 @@ function FileUploadForm() {
                             className="mr-2"
                         />
                         <label htmlFor="enable-parallel">Enable Parallelization</label>
-                    {error && <div className="error">{error}</div>}
+                        {error && <div className="error">{error}</div>}
                     </div>
                     <button type="submit"
                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
@@ -132,6 +133,12 @@ function FileUploadForm() {
                     </table>
                 </form>
             </div>
+            <div className="border border-gray-200 rounded-md p-4 max-w-xs absolute top-8 right-8">
+                <p className="text-lg font-semibold">
+                    <a href="history" className="text-gray-800 no-underline hover:underline">History</a>
+                </p>
+            </div>
+
 
             <footer className="fixed inset-x-0 bottom-0">
                 <div className="sm:items-center sm:justify-between">

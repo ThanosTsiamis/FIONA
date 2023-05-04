@@ -225,7 +225,7 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     outlying_elements = {}
     pattern_elements = {}
 
-    threshold_values = np.linspace(1, 99, 5000)
+    threshold_values = np.linspace(1, 50, 2500)
     previous_values = [-1, -1]
     pattern_indices_dict = {}
     lower_outlying_indices_dict = {}
