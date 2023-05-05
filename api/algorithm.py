@@ -105,6 +105,12 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
             continue
         children_identifiers = feature_to_split_on(specificity_level=current_node.specificity_level,
                                                    df=current_node.data, name=current_node.name)
+        if current_node.specificity_level == -2:
+            if np.unique(current_node.data[:, 0]).size == current_node.data[:, 0].size:
+                if len(children_identifiers) == 1:
+                    if children_identifiers[0] == {'d'} or children_identifiers[0] == {'d', 's'}:
+                        # TODO:Fix the latter case e.g. sddssdds
+                        continue
         if len(children_identifiers) == 1 and current_node.specificity_level == len(str(current_node.data[0, 0])):
             continue
         surviving_data = current_node.data
@@ -325,6 +331,7 @@ def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
+    # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalClean.csv")
     dataframe = read_data("resources/json_dumps/" + file.filename)
     output = {}
 
