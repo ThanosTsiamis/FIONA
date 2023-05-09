@@ -86,6 +86,16 @@ def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
                        )
 
 
+def calculate_machine_limit():
+    try:
+        for i in range(1000, 200000, 1000):
+            in_memory_variable = np.empty([4, i, i], dtype='float32')
+            gc.collect()
+    except:
+        gc.collect()
+        return i - 1000
+
+
 def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     """
         The tree grow algorithm. It works by adding nodes in the list and popping the head each time in order to split
@@ -98,6 +108,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     """
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
+    # pruning_preparations = False
     while node_list:
         current_node = node_list.pop(0)
         child_list = []
@@ -106,11 +117,33 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
         children_identifiers = feature_to_split_on(specificity_level=current_node.specificity_level,
                                                    df=current_node.data, name=current_node.name)
         if current_node.specificity_level == -2:
-            if np.unique(current_node.data[:, 0]).size == current_node.data[:, 0].size:
+            limit_of_machine = calculate_machine_limit()
+            if (np.unique(current_node.data[:, 0]).size == current_node.data[:, 0].size) or (
+                    np.unique(current_node.data[:, 0]).size > limit_of_machine):
                 if len(children_identifiers) == 1:
                     if children_identifiers[0] == {'d'} or children_identifiers[0] == {'d', 's'}:
                         # TODO:Fix the latter case e.g. sddssdds
                         continue
+        #         else:
+        #             fifteen_percent_of_limit = int(limit_of_machine * 0.15)
+        #             children_occ_dict = {}
+        #             children_percentage_dict = {}
+        #             pruning_preparations = True
+        #             for kid in children_identifiers:
+        #                 children_occ_dict[frozenset(kid)] = np.unique(
+        #                     current_node.data[current_node.data[:, 1] == kid][:, 0]).size
+        #             sorted_dict = {k: v for k, v in sorted(children_occ_dict.items(), key=lambda item: item[1])}
+        #             for kid in sorted_dict.keys():
+        #                 if children_occ_dict[kid] < fifteen_percent_of_limit:
+        #                     print(kid)
+        #                 else:
+        #                     break
+        #                     #Pare ayto to kid kai arxise na moirazeis me pososta
+        #             summation = sum(children_occ_dict.values())
+        #             for val in children_occ_dict:
+        #                 children_percentage_dict[val] = children_occ_dict[val] / summation
+        #
+        # if pruning_preparations == True and current_node.specificity_level == -1:
         if len(children_identifiers) == 1 and current_node.specificity_level == len(str(current_node.data[0, 0])):
             continue
         surviving_data = current_node.data
@@ -187,10 +220,10 @@ def score_function(leaves: tuple):
     max_depth = max([leaf.depth for leaf in leaves])
     try:
         gc.collect()
-        matrix = np.empty([4, len(leaves), len(leaves)], dtype='float64')
+        matrix = np.empty([4, len(leaves), len(leaves)], dtype='float32')
     except:
         gc.collect()
-        matrix = np.empty([4, len(leaves), len(leaves)], dtype='float64')
+        matrix = np.empty([4, len(leaves), len(leaves)], dtype='float32')
     matrix.fill(0)
 
     # TODO: Maybe parallelise it here?
@@ -221,8 +254,22 @@ def score_function(leaves: tuple):
 def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     column = attribute_to_process
     attribute = process_data(pd.DataFrame(dataframe[column]))
+    machine_limit = calculate_machine_limit()
     root = tree_grow(attribute)
-    leaves = root.leaves
+    ndistinct = 2
+    while True:
+        leaves = root.leaves
+        if len(leaves) < machine_limit:
+            break
+        else:
+            str_x = str(ndistinct)
+            if len(str_x) == 1:
+                ndistinct += 1
+            elif str_x[-1] == '9':
+                ndistinct = int('1' + '0' * len(str_x))
+            else:
+                ndistinct += 1
+            root = tree_grow(attribute, nDistinctMin=ndistinct)
     print(attribute)
     matrices_packet = score_function(leaves)
     score_matrix = matrices_packet[3]
@@ -325,13 +372,14 @@ def process_column(column, dataframe):
 def process(file: str, multiprocess_switch):
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
     # dataframe = read_data("resources/datasets/datasets_testing_purposes/dirty.csv")
-    # dataframe = read_data("../resources/json_dumps/dirty.csv")
+    # dataframe = read_data("resources/json_dumps/flightsDirty.csv")
     # dataframe = read_data("../resources/json_dumps/School_Learning_Modalities__2020-2021.csv")
     # dataframe = read_data("../resources/json_dumps/pima-indians-diabetes.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
     # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
-    # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalClean.csv")
+    # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalDirty.csv")
+    # dataframe = read_data("resources/datasets/datasets_testing_purposes/tax/taxClean.csv")
     dataframe = read_data("resources/json_dumps/" + file.filename)
     output = {}
 
@@ -345,6 +393,6 @@ def process(file: str, multiprocess_switch):
             output.update(res)
     else:
         for column in dataframe.columns:
-            if column != "tuple_id":
+            if column == "salary":
                 output.update(add_outlying_elements_to_attribute(column, dataframe))
     return output

@@ -52,5 +52,5 @@ if __name__ == "__main__":
     multiprocess = "False"
     big_dict = process(filename, multiprocess)
     json_serialised = json.dumps(big_dict)
-    with open("../resources/json_dumps/" + "jhjhbjhbhj.json", "w") as outfile:
-        outfile.write(json_serialised)
+    # with open("../resources/json_dumps/" + "jhjhbjhbhj.json", "w") as outfile:
+    #     outfile.write(json_serialised)
