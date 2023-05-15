@@ -51,6 +51,11 @@ const HistoryPage = () => {
 
     return (
         <div>
+            <div className="border border-gray-200 rounded-md p-4 max-w-xs absolute top-8 right-8">
+                <p className="text-lg font-semibold">
+                    <a href="/" className="text-gray-800 no-underline hover:underline">Main Page</a>
+                </p>
+            </div>
             <b>Select the JSON file:</b>
             <select value={selectedFile} onChange={(e) => setSelectedFile(e.target.value)}>
                 <option value="">-- Select a file --</option>

@@ -118,37 +118,63 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                                                    df=current_node.data, name=current_node.name)
         if current_node.specificity_level == -2:
             limit_of_machine = calculate_machine_limit()
-            if (np.unique(current_node.data[:, 0]).size == current_node.data[:, 0].size) or (
+            if (np.unique(current_node.data[:, 0]).size > int(0.95 * current_node.data[:, 0].size)) or (
                     np.unique(current_node.data[:, 0]).size > limit_of_machine):
                 if len(children_identifiers) == 1:
                     if children_identifiers[0] == {'d'} or children_identifiers[0] == {'d', 's'}:
                         # TODO:Fix the latter case e.g. sddssdds
                         continue
-        #         else:
-        #             fifteen_percent_of_limit = int(limit_of_machine * 0.15)
-        #             children_occ_dict = {}
-        #             children_percentage_dict = {}
-        #             pruning_preparations = True
-        #             for kid in children_identifiers:
-        #                 children_occ_dict[frozenset(kid)] = np.unique(
-        #                     current_node.data[current_node.data[:, 1] == kid][:, 0]).size
-        #             sorted_dict = {k: v for k, v in sorted(children_occ_dict.items(), key=lambda item: item[1])}
-        #             for kid in sorted_dict.keys():
-        #                 if children_occ_dict[kid] < fifteen_percent_of_limit:
-        #                     print(kid)
-        #                 else:
-        #                     break
-        #                     #Pare ayto to kid kai arxise na moirazeis me pososta
-        #             summation = sum(children_occ_dict.values())
-        #             for val in children_occ_dict:
-        #                 children_percentage_dict[val] = children_occ_dict[val] / summation
-        #
+                if len(children_identifiers) > 7:
+                    custom_limit = 1200
+                    fifteen_percent_of_limit = int(0.15 * custom_limit)
+                    eightyfive_percent_of_limit = int(0.85 * custom_limit)
+                    children_occ_dict = {}
+                    new_dict = {}
+                    appearances = {}
+                    # pruning_preparations = True
+                    for kid in children_identifiers:
+                        appearance = np.unique(current_node.data[current_node.data[:, 1] == kid][:, 0])
+                        appearances[frozenset(kid)] = appearance
+                        children_occ_dict[frozenset(kid)] = appearance.size
+                    sorted_values = sorted(children_occ_dict.values())
+                    for value in sorted_values:
+                        key = next((k for k, v in children_occ_dict.items() if v == value), None)
+                        if value <= fifteen_percent_of_limit:
+                            new_dict[key] = value  # add the key-value pair to the new dictionary
+                            del children_occ_dict[key]
+                            fifteen_percent_of_limit -= value
+                        else:
+                            new_dict[key] = fifteen_percent_of_limit
+                            children_occ_dict[key] = value - fifteen_percent_of_limit
+                            # fifteen_percent_of_limit=0
+                            break
+                    total_sum = sum(children_occ_dict.values())
+                    remaining_occ_percentage = {}
+                    for key in children_occ_dict:
+                        remaining_occ_percentage[key] = children_occ_dict[key] / total_sum
+                    minimum_85_and_total_sum = min(eightyfive_percent_of_limit, total_sum)
+                    for key in remaining_occ_percentage:
+                        if key in new_dict:
+                            new_dict[key] += int(remaining_occ_percentage[key] * minimum_85_and_total_sum)
+                        else:
+                            new_dict[key] = int(remaining_occ_percentage[key] * minimum_85_and_total_sum)
+                    pile_of_data = np.empty((0, 2))
+                    for key in new_dict:
+                        elements_to_be_kept = appearances[key][:new_dict[key]]
+                        mask = np.where(np.isin(current_node.data[:, 0], elements_to_be_kept))[0]
+                        pile_of_data = np.vstack((pile_of_data, current_node.data[mask]))
+                    current_node.data=pile_of_data
         # if pruning_preparations == True and current_node.specificity_level == -1:
+        if current_node.specificity_level == 0 and len(current_node.data[0, 0]) > 34:
+            continue
         if len(children_identifiers) == 1 and current_node.specificity_level == len(str(current_node.data[0, 0])):
             continue
         surviving_data = current_node.data
         children_identifiers = list(children_identifiers)
         children_identifiers.sort(key=lambda s: len(str(s)), reverse=True)
+        if current_node.specificity_level == -1:
+            children_identifiers.sort()
+        breaking_flag = False
         for item in children_identifiers:
             main_data = surviving_data
             if current_node.specificity_level == -2:
@@ -156,9 +182,13 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                 data_for_child = current_node.data[positions]
             elif current_node.specificity_level == -1:
                 length = np.vectorize(len)
-                positions = np.nonzero(np.isin(length(current_node.data[:, 0]), item))
-                data_for_child = current_node.data[positions]
-
+                if item < 34:
+                    positions = np.nonzero(np.isin(length(current_node.data[:, 0]), item))
+                    data_for_child = current_node.data[positions]
+                else:
+                    positions = np.where(length(current_node.data[:, 0]) > 34)
+                    data_for_child = current_node.data[positions]
+                    breaking_flag = True
             else:
                 positions = [i for i, si in enumerate(main_data[:, 0]) if si.startswith(item)]
                 if len(positions) == 0:
@@ -175,6 +205,8 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                          specificity_level=current_node.specificity_level + 1)
             child_list.append(child)
             node_list.append(child)
+            if breaking_flag:
+                break
         current_node.children = child_list
     return root
 
@@ -257,7 +289,8 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     machine_limit = calculate_machine_limit()
     root = tree_grow(attribute)
     ndistinct = 2
-    while True:
+    tries = 0  # failsafe mechanism
+    while True or tries < 40:
         leaves = root.leaves
         if len(leaves) < machine_limit:
             break
@@ -270,6 +303,7 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
             else:
                 ndistinct += 1
             root = tree_grow(attribute, nDistinctMin=ndistinct)
+            tries += 1
     print(attribute)
     matrices_packet = score_function(leaves)
     score_matrix = matrices_packet[3]
@@ -370,17 +404,23 @@ def process_column(column, dataframe):
 
 
 def process(file: str, multiprocess_switch):
-    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
-    # dataframe = read_data("resources/datasets/datasets_testing_purposes/dirty.csv")
-    # dataframe = read_data("resources/json_dumps/flightsDirty.csv")
-    # dataframe = read_data("../resources/json_dumps/School_Learning_Modalities__2020-2021.csv")
-    # dataframe = read_data("../resources/json_dumps/pima-indians-diabetes.csv")
-    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
-    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
-    # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
-    # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalDirty.csv")
-    # dataframe = read_data("resources/datasets/datasets_testing_purposes/tax/taxClean.csv")
-    dataframe = read_data("resources/json_dumps/" + file.filename)
+    try:
+        dataframe = read_data("resources/json_dumps/" + file.filename)
+    except AttributeError:
+        # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/dirty.csv")
+        # dataframe = read_data("resources/json_dumps/flightsDirty.csv")
+        # dataframe = read_data("../resources/json_dumps/School_Learning_Modalities__2020-2021.csv")
+        # dataframe = read_data("../resources/json_dumps/pima-indians-diabetes.csv")
+        # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
+        # dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
+        # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalDirty.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/tax/taxClean.csv")
+        dataframe = read_data("resources/datasets/datasets_testing_purposes/beers/beersClean.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
+
     output = {}
 
     if multiprocess_switch == "True":
@@ -393,6 +433,6 @@ def process(file: str, multiprocess_switch):
             output.update(res)
     else:
         for column in dataframe.columns:
-            if column == "salary":
+            if column == "beer-name":
                 output.update(add_outlying_elements_to_attribute(column, dataframe))
     return output

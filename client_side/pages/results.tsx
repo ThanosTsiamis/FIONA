@@ -37,6 +37,11 @@ const ResultsPage = () => {
 
     return (
         <div>
+            <div className="border border-gray-200 rounded-md p-4 max-w-xs absolute top-8 right-8">
+                <p className="text-lg font-semibold">
+                    <a href="/" className="text-gray-800 no-underline hover:underline">Main Page</a>
+                </p>
+            </div>
             <b>Select from the dropdown the Appropriate Attribute</b>
             <select value={selectedKey} onChange={(e) => setSelectedKey(e.target.value)}>
                 {headers.map((outerKey) => (
@@ -96,6 +101,7 @@ const ResultsPage = () => {
                 </table>
             )}
         </div>
+
     );
 };
 
