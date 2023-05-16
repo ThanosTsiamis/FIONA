@@ -85,69 +85,68 @@ function FileUploadForm() {
                 Discover hidden insights and unlock the true potential of your data with our cutting-edge categorical
                 outlier detection technology.
             </p>
-            <div className="flex items-center justify-center">
+            <div className="flex flex-col items-center justify-center">
                 <form onSubmit={handleSubmit}>
-                    <div>
+                    <div className="mb-4">
                         <input type="file" ref={fileInput} onChange={handleFileChange}/>
                     </div>
-                    <div className="flex items-center my-4">
+                    <div className="flex items-center mb-4">
                         <input
+
                             type="checkbox"
                             id="enable-parallel"
-
                             checked={enableParallel}
                             onChange={handleParallelChange}
                             className="mr-2"
                         />
                         <label htmlFor="enable-parallel">Enable Parallelization</label>
+                        {error && <div className="error">{error}</div>}
                     </div>
-                    {error && <div className="error">{error}</div>}
                     <button type="submit"
                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
                             disabled={isLoading}>
                         Upload
                     </button>
-                    {isLoading && (
-                        <div className="flex items-center justify-center">
-                            <div
-                                className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
-                                role="status">
-                                <span
-                                    className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">Processing...</span>
-                            </div>
-                        </div>
-                    )}
-                    <table>
-                        <thead>
-                        <tr>
-                            {csvData[0]?.map((header) => (
-                                <th key={header}>{header}</th>
-                            ))}
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {csvData.slice(1).map((row, index) => (
-                            <tr key={index}>
-                                {row.map((cell, index) => (
-                                    <td key={index}>{cell}</td>
-                                ))}
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
                 </form>
+                {isLoading && (
+                    <div className="flex items-center justify-center mt-4">
+                        <div
+                            className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+                            role="status">
+                            <span
+                                className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">Processing...</span>
+                        </div>
+                    </div>
+                )}
             </div>
+            <table className="mt-4">
+                <thead>
+                <tr>
+                    {csvData[0]?.map((header) => (
+                        <th key={header}>{header}</th>
+                    ))}
+                </tr>
+                </thead>
+                <tbody>
+                {csvData.slice(1).map((row, index) => (
+                    <tr key={index}>
+                        {row.map((cell, index) => (
+                            <td key={index}>{cell}</td>
+                        ))}
+                    </tr>
+                ))}
+                </tbody>
+            </table>
             <div className="border border-gray-200 rounded-md p-4 max-w-xs absolute top-8 right-8">
                 <p className="text-lg font-semibold">
                     <a href="history" className="text-gray-800 no-underline hover:underline">History</a>
                 </p>
             </div>
-            <footer className="fixed inset-x-0 bottom-0">
-                <div className="sm:items-center sm:justify-between">
+            <footer className="fixed left-0 bottom-0 bg-gray-100 p-4">
+                <div className="sm:items-center sm:justify-between bg-gray-200 rounded-md p-4">
                     <a href="https://www.uu.nl/en/" className="flex items-center mb-4 sm:mb-0">
                         <Image src="/UU_logo_2021_EN_RGB.png" alt="Utrecht University Logo" width="158" height={64}/>
-                        <span
-                            className="self-center text-base whitespace-nowrap dark:text-white">Utrecht University</span>
+                        <span className="self-center text-base whitespace-nowrap dark:text-white ml-4">Utrecht University</span>
                     </a>
                 </div>
             </footer>
