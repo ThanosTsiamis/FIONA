@@ -11,10 +11,19 @@ function FileUploadForm() {
     const router = useRouter();
     const [csvData, setCsvData] = useState<Array<Array<string>>>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [enableParallel, setEnableParallel] = useState(false);
+    const [error, setError] = useState('');
 
     const handleFileChange = () => {
         const file = fileInput.current?.files?.[0];
         if (!file) {
+            return;
+        }
+        const fileSizeInMb = file.size / (1024 * 1024);
+        const maxFileSizeInMb = 3;
+
+        if (fileSizeInMb > maxFileSizeInMb) {
+            setError('File is too large to be previewed on screen and will slow down your computer');
             return;
         }
 
@@ -25,6 +34,9 @@ function FileUploadForm() {
             },
         });
     };
+    const handleParallelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEnableParallel(e.target.checked);
+    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -34,6 +46,11 @@ function FileUploadForm() {
             return;
         }
         formData.append('file', file);
+        if (enableParallel) {
+            formData.append('enableParallel', 'True')
+        } else {
+            formData.append('enableParallel', 'False')
+        }
 
         try {
             setIsLoading(true);
@@ -60,7 +77,8 @@ function FileUploadForm() {
             <Head>
                 <title>FIONA</title>
             </Head>
-            <h1 className="mb-4 ml-10 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-1xl lg:text-5xl dark:text-white">Outlier
+            <h1 className="mb-4 ml-10 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-1xl lg:text-5xl dark:text-white">FIONA:
+                Categorical Outlier
                 Detector</h1>
             <p className="mb-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">Discover
                 hidden insights and unlock the true potential of your data with our cutting-edge categorical outlier
@@ -68,6 +86,17 @@ function FileUploadForm() {
             <div className="flex items-center justify-center">
                 <form onSubmit={handleSubmit}>
                     <input type="file" ref={fileInput} onChange={handleFileChange}/>
+                    <div className="flex items-center my-4">
+                        <input
+                            type="checkbox"
+                            id="enable-parallel"
+                            checked={enableParallel}
+                            onChange={handleParallelChange}
+                            className="mr-2"
+                        />
+                        <label htmlFor="enable-parallel">Enable Parallelization</label>
+                        {error && <div className="error">{error}</div>}
+                    </div>
                     <button type="submit"
                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
                             disabled={isLoading}>Upload
@@ -104,6 +133,12 @@ function FileUploadForm() {
                     </table>
                 </form>
             </div>
+            <div className="border border-gray-200 rounded-md p-4 max-w-xs absolute top-8 right-8">
+                <p className="text-lg font-semibold">
+                    <a href="history" className="text-gray-800 no-underline hover:underline">History</a>
+                </p>
+            </div>
+
 
             <footer className="fixed inset-x-0 bottom-0">
                 <div className="sm:items-center sm:justify-between">
