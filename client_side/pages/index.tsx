@@ -139,7 +139,8 @@ function FileUploadForm() {
             </table>
             <div className="border border-gray-200 rounded-md p-4 max-w-xs absolute top-8 right-8">
                 <p className="text-lg font-semibold">
-                    <a href="history" className="text-gray-800 no-underline hover:underline">History</a>
+                    <a href="history" className="text-gray-800 no-underline hover:underline">History</a>{" "}
+                    <span role="img" aria-label="book">📖</span>
                 </p>
             </div>
             <footer className="fixed left-0 bottom-0 bg-gray-100 p-4">
