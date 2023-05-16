@@ -125,7 +125,8 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                         # TODO:Fix the latter case e.g. sddssdds
                         continue
                 if len(children_identifiers) > 7:
-                    custom_limit = 1200
+                    # TODO:THINK OF ANOTHER CUSTOM LIMIT. OR HOW TO DO IT EFFICIENTLY
+                    custom_limit = 600
                     fifteen_percent_of_limit = int(0.15 * custom_limit)
                     eightyfive_percent_of_limit = int(0.85 * custom_limit)
                     children_occ_dict = {}
@@ -163,7 +164,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                         elements_to_be_kept = appearances[key][:new_dict[key]]
                         mask = np.where(np.isin(current_node.data[:, 0], elements_to_be_kept))[0]
                         pile_of_data = np.vstack((pile_of_data, current_node.data[mask]))
-                    current_node.data=pile_of_data
+                    current_node.data = pile_of_data
         # if pruning_preparations == True and current_node.specificity_level == -1:
         if current_node.specificity_level == 0 and len(current_node.data[0, 0]) > 34:
             continue
@@ -433,6 +434,6 @@ def process(file: str, multiprocess_switch):
             output.update(res)
     else:
         for column in dataframe.columns:
-            if column == "beer-name":
+            if column != "bee-rnam":
                 output.update(add_outlying_elements_to_attribute(column, dataframe))
     return output
