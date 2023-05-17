@@ -25,6 +25,12 @@ def process_data(dataframe: pd.DataFrame):
 
 
 def generalise_string(string: str, specificity_level=0):
+    """
+    Convert a string to its generalised equivalent string given a specificity level.
+    :param string: a string about to be converted to its generalised equivalent
+    :param specificity_level: the current specificity level of the string
+    :return: the generalised equivalent of the string
+    """
     string = str(string)
     if specificity_level >= 0:
         original_part = list(string[:specificity_level])
@@ -87,6 +93,10 @@ def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
 
 
 def calculate_machine_limit():
+    """
+        A fast way to force memory overflow in order to see the capabilities of the machine.Not a deterministic process.
+    :return: the maximum k of a kxk matrix which **can** fit in main memory.
+    """
     try:
         for i in range(1000, 200000, 1000):
             in_memory_variable = np.empty([4, i, i], dtype='float32')
