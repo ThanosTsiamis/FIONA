@@ -384,26 +384,27 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     previous_threshold_dict_value = -1
     marked_for_clearance = []
     for threshold_level in col_outliers_and_patterns['outliers'].keys():
+        if threshold_level<50:
 
-        lexicon[column]['outliers'][threshold_level] = {}
-        inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
-        pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
-        for outlier_rep in col_outliers_and_patterns['outliers'][threshold_level].keys():
-            first_outliers_element = list(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])[0]
-            generalised_pattern = generalise_string(first_outliers_element)
-            if generalised_pattern in pattern_set:
-                continue
-            else:
-                inner_dict = lexicon[column]['outliers'][threshold_level].get(generalised_pattern, {})
-                inner_dict.update(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])
-                lexicon[column]['outliers'][threshold_level][generalised_pattern] = inner_dict
-        if has_previous_threshold_dict:
-            current_dict = lexicon[column]['outliers'][threshold_level]
-            previous_dict = lexicon[column]['outliers'][previous_threshold_dict_value]
-            if compare_dicts(current_dict, previous_dict):
-                marked_for_clearance.append(threshold_level)
-        has_previous_threshold_dict = True
-        previous_threshold_dict_value = threshold_level
+            lexicon[column]['outliers'][threshold_level] = {}
+            inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
+            pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
+            for outlier_rep in col_outliers_and_patterns['outliers'][threshold_level].keys():
+                first_outliers_element = list(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])[0]
+                generalised_pattern = generalise_string(first_outliers_element)
+                if generalised_pattern in pattern_set:
+                    continue
+                else:
+                    inner_dict = lexicon[column]['outliers'][threshold_level].get(generalised_pattern, {})
+                    inner_dict.update(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])
+                    lexicon[column]['outliers'][threshold_level][generalised_pattern] = inner_dict
+            if has_previous_threshold_dict:
+                current_dict = lexicon[column]['outliers'][threshold_level]
+                previous_dict = lexicon[column]['outliers'][previous_threshold_dict_value]
+                if compare_dicts(current_dict, previous_dict):
+                    marked_for_clearance.append(threshold_level)
+            has_previous_threshold_dict = True
+            previous_threshold_dict_value = threshold_level
     for threshold_level in marked_for_clearance:
         del lexicon[column]['outliers'][threshold_level]
 
@@ -477,6 +478,6 @@ def process(file: str, multiprocess_switch):
             output.update(res)
     else:
         for column in dataframe.columns:
-            if column == "sched_arr_time":
+            if column == "src":
                 output.update(add_outlying_elements_to_attribute(column, dataframe))
     return output
