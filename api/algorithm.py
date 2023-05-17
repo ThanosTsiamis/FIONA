@@ -414,6 +414,18 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     for threshold_level in sorted(col_outliers_and_patterns['patterns'].keys(), reverse=True):
         if threshold_level > 50:
             lexicon[column]['patterns'][threshold_level] = {}
+            inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
+            pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
+            for pattern in pattern_set:
+                lexicon[column]['patterns'][threshold_level][pattern]={}
+            for pattern_rep in col_outliers_and_patterns['patterns'][threshold_level].keys():
+                first_patterns_element = list(col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])[0]
+                generalised_pattern = generalise_string(first_patterns_element)
+
+                inner_dict = lexicon[column]['patterns'][threshold_level].get(generalised_pattern, {})
+                inner_dict.update(col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])
+                lexicon[column]['patterns'][threshold_level][generalised_pattern] = inner_dict
+
             if has_previous_threshold_dict:
                 current_dict = lexicon[column]['patterns'][threshold_level]
                 previous_dict = lexicon[column]['patterns'][previous_threshold_dict_value]
