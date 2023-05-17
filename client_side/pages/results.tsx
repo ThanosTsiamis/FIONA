@@ -103,7 +103,7 @@ const ResultsPage = () => {
                         </tfoot>
                     </table>
                 )}
-                <h2 style={{fontSize: '60px', marginTop: '20px',marginBottom:'20px'}}>Patterns</h2>
+                <h2 style={{fontSize: '60px', marginTop: '20px', marginBottom: '20px'}}>Patterns</h2>
                 {Object.keys(data).length > 0 && (
                     <table>
                         <thead>
@@ -117,14 +117,14 @@ const ResultsPage = () => {
                             const current = data[selectedKey]['patterns'][innerKey];
                             const previous = index > 0 ? data[selectedKey]['patterns'][array[index - 1]] : {};
 
-                            const occurrences: { [key: string]: number } = {};
-                            for (const [key, value] of Object.entries(current)) {
+                            const patterns: string[] = [];
+                            for (const [key] of Object.entries(current)) {
                                 if (!(key in previous)) {
-                                    occurrences[key] = value;
+                                    patterns.push(key);
                                 }
                             }
 
-                            if (Object.keys(occurrences).length === 0) {
+                            if (patterns.length === 0) {
                                 return null;
                             }
 
@@ -137,11 +137,25 @@ const ResultsPage = () => {
                                         {threshold}
                                     </td>
                                     <td colSpan={2} style={{borderTop: '1px solid black'}}>
-                                        <pre>{JSON.stringify(occurrences, null, 4)}</pre>
+                                        <table>
+                                            <thead>
+                                            <tr>
+                                                <th>Patterns</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {patterns.map((pattern) => (
+                                                <tr key={pattern}>
+                                                    <td>{pattern}</td>
+                                                </tr>
+                                            ))}
+                                            </tbody>
+                                        </table>
                                     </td>
                                 </tr>
                             );
                         })}
+
                         </tbody>
                         <tfoot>
                         <tr>
