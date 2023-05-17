@@ -323,7 +323,7 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     outlying_elements = {}
     pattern_elements = {}
 
-    threshold_values = np.linspace(1, 50, 2500)
+    threshold_values = np.linspace(1, 99, 5000)
     previous_values = [-1, -1]
     pattern_indices_dict = {}
     lower_outlying_indices_dict = {}
@@ -379,12 +379,13 @@ def compare_dicts(dict1, dict2):
 
 def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     col_outliers_and_patterns = process_attribute(column, dataframe)
-    lexicon = {column: {}}
+    lexicon = {column: {'outliers': {}, 'patterns': {}}}
     has_previous_threshold_dict = False
     previous_threshold_dict_value = -1
     marked_for_clearance = []
     for threshold_level in col_outliers_and_patterns['outliers'].keys():
-        lexicon[column][threshold_level] = {}
+
+        lexicon[column]['outliers'][threshold_level] = {}
         inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
         pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
         for outlier_rep in col_outliers_and_patterns['outliers'][threshold_level].keys():
@@ -393,18 +394,37 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
             if generalised_pattern in pattern_set:
                 continue
             else:
-                inner_dict = lexicon[column][threshold_level].get(generalised_pattern, {})
+                inner_dict = lexicon[column]['outliers'][threshold_level].get(generalised_pattern, {})
                 inner_dict.update(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])
-                lexicon[column][threshold_level][generalised_pattern] = inner_dict
+                lexicon[column]['outliers'][threshold_level][generalised_pattern] = inner_dict
         if has_previous_threshold_dict:
-            current_dict = lexicon[column][threshold_level]
-            previous_dict = lexicon[column][previous_threshold_dict_value]
+            current_dict = lexicon[column]['outliers'][threshold_level]
+            previous_dict = lexicon[column]['outliers'][previous_threshold_dict_value]
             if compare_dicts(current_dict, previous_dict):
                 marked_for_clearance.append(threshold_level)
         has_previous_threshold_dict = True
         previous_threshold_dict_value = threshold_level
     for threshold_level in marked_for_clearance:
-        del lexicon[column][threshold_level]
+        del lexicon[column]['outliers'][threshold_level]
+
+    # Now for the patterns
+    has_previous_threshold_dict = False
+    previous_threshold_dict_value = -1
+    marked_for_clearance = []
+    for threshold_level in sorted(col_outliers_and_patterns['patterns'].keys(), reverse=True):
+        if threshold_level > 50:
+            lexicon[column]['patterns'][threshold_level] = {}
+            if has_previous_threshold_dict:
+                current_dict = lexicon[column]['patterns'][threshold_level]
+                previous_dict = lexicon[column]['patterns'][previous_threshold_dict_value]
+                if compare_dicts(current_dict, previous_dict):
+                    marked_for_clearance.append(threshold_level)
+            has_previous_threshold_dict = True
+            previous_threshold_dict_value = threshold_level
+    for threshold_level in marked_for_clearance:
+        del lexicon[column]['patterns'][threshold_level]
+
+    print("")
 
     print("Finished " + column)
     return lexicon
@@ -428,7 +448,8 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/tax/taxClean.csv")
-        dataframe = read_data("resources/datasets/datasets_testing_purposes/beers/beersClean.csv")
+        dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/flightsDirty.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/beers/beersClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
 
@@ -444,6 +465,6 @@ def process(file: str, multiprocess_switch):
             output.update(res)
     else:
         for column in dataframe.columns:
-            if column != "bee-rnam":
+            if column == "sched_arr_time":
                 output.update(add_outlying_elements_to_attribute(column, dataframe))
     return output
