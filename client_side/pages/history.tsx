@@ -142,7 +142,6 @@ const HistoryPage = () => {
                             </thead>
                             <tbody>
                             {Object.keys(resultsData[selectedKey]['patterns'])
-                                .sort((a, b) => toNumber(b) - toNumber(a)) // Sort in decreasing order
                                 .map((innerKey, index, array) => {
                                     const current = resultsData[selectedKey]['patterns'][innerKey];
                                     const previous =
@@ -152,7 +151,7 @@ const HistoryPage = () => {
 
                                     const patterns: { [key: string]: number } = {};
                                     for (const [key, value] of Object.entries(current)) {
-                                        if (key in previous) {
+                                        if (!(key in previous)) {
                                             patterns[key] = value;
                                         }
                                     }
@@ -187,8 +186,10 @@ const HistoryPage = () => {
                                             </td>
                                         </tr>
                                     );
-                                })}
+                                })
+                            }
                             </tbody>
+
                             <tfoot>
                             <tr>
                                 <td colSpan={2} style={{borderTop: '1px solid black'}}/>

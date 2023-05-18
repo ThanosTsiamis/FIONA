@@ -104,7 +104,7 @@ const ResultsPage = () => {
                     </table>
                 )}
                 <h2 style={{fontSize: '60px', marginTop: '20px', marginBottom: '20px'}}>Patterns</h2>
-                {Object.keys(data).length > 0 && (
+                {data[selectedKey] && data[selectedKey]['patterns'] && (
                     <table>
                         <thead>
                         <tr>
@@ -113,49 +113,53 @@ const ResultsPage = () => {
                         </tr>
                         </thead>
                         <tbody>
-                        {Object.keys(data[selectedKey]['patterns']).map((innerKey, index, array) => {
-                            const current = data[selectedKey]['patterns'][innerKey];
-                            const previous = index > 0 ? data[selectedKey]['patterns'][array[index - 1]] : {};
+                        {Object.keys(data[selectedKey]['patterns'])
+                            .sort((a, b) => toNumber(b) - toNumber(a)) // Sort in decreasing order
+                            .map((innerKey, index, array) => {
+                                const current = data[selectedKey]['patterns'][innerKey];
+                                const previous =
+                                    index < array.length - 1
+                                        ? data[selectedKey]['patterns'][array[index + 1]]
+                                        : {};
 
-                            const patterns: string[] = [];
-                            for (const [key] of Object.entries(current)) {
-                                if (!(key in previous)) {
-                                    patterns.push(key);
+                                const patterns: { [key: string]: number } = {};
+                                for (const [key, value] of Object.entries(current)) {
+                                    if (key in previous) {
+                                        patterns[key] = value;
+                                    }
                                 }
-                            }
 
-                            if (patterns.length === 0) {
-                                return null;
-                            }
+                                if (Object.keys(patterns).length === 0) {
+                                    return null;
+                                }
 
-                            const threshold = toNumber(innerKey);
+                                const threshold = toNumber(innerKey);
 
-                            return (
-                                <tr key={innerKey}>
-                                    <td colSpan={1}
-                                        style={{borderTop: '1px solid black', borderRight: '1px solid black'}}>
-                                        {threshold}
-                                    </td>
-                                    <td colSpan={2} style={{borderTop: '1px solid black'}}>
-                                        <table>
-                                            <thead>
-                                            <tr>
-                                                <th>Patterns</th>
-                                            </tr>
-                                            </thead>
-                                            <tbody>
-                                            {patterns.map((pattern) => (
-                                                <tr key={pattern}>
-                                                    <td>{pattern}</td>
-                                                </tr>
-                                            ))}
-                                            </tbody>
-                                        </table>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-
+                                return (
+                                    <tr key={innerKey}>
+                                        <td
+                                            colSpan={1}
+                                            style={{
+                                                borderTop: '1px solid black',
+                                                borderRight: '1px solid black',
+                                            }}
+                                        >
+                                            {threshold}
+                                        </td>
+                                        <td colSpan={2} style={{borderTop: '1px solid black'}}>
+                                            <table>
+                                                <tbody>
+                                                {Object.entries(patterns).map(([pattern, value]) => (
+                                                    <tr key={pattern}>
+                                                        <td>{pattern}</td>
+                                                    </tr>
+                                                ))}
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                         <tfoot>
                         <tr>
