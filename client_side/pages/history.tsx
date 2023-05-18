@@ -3,11 +3,12 @@ import React, {useEffect, useState} from 'react';
 type HistoryData = {
     [key: string]: string[];
 };
-
-type ResultsData = {
+type Data = {
     [key: string]: {
         [key: string]: {
-            [key: string]: number;
+            [key: string]: {
+                [key: string]: number;
+            };
         };
     };
 };
@@ -15,7 +16,7 @@ type ResultsData = {
 const HistoryPage = () => {
     const [historyData, setHistoryData] = useState<HistoryData>({});
     const [selectedFile, setSelectedFile] = useState<string>('');
-    const [resultsData, setResultsData] = useState<ResultsData>({});
+    const [resultsData, setResultsData] = useState<Data>({});
     const [headers, setHeaders] = useState<string[]>([]);
     const [selectedKey, setSelectedKey] = useState<string>('');
 
@@ -53,8 +54,12 @@ const HistoryPage = () => {
         <div>
             <div className="border border-gray-200 rounded-md p-4 max-w-xs absolute top-8 right-8">
                 <p className="text-lg font-semibold">
-                    <a href="/" className="text-gray-800 no-underline hover:underline">Main Page</a>{" "}
-                    <span role="img" aria-label="house">🏠</span>
+                    <a href="/" className="text-gray-800 no-underline hover:underline">
+                        Main Page
+                    </a>{' '}
+                    <span role="img" aria-label="house">
+            🏠
+          </span>
                 </p>
             </div>
 
@@ -70,7 +75,7 @@ const HistoryPage = () => {
 
             {selectedFile && (
                 <div>
-                    <b>Select from the dropdown the appropriate attribute:</b>
+                    <b>Select from the dropdown the Appropriate Attribute</b>
                     <select value={selectedKey} onChange={(e) => setSelectedKey(e.target.value)}>
                         {headers.map((outerKey) => (
                             <option key={outerKey} value={outerKey}>
@@ -87,11 +92,11 @@ const HistoryPage = () => {
                             </tr>
                             </thead>
                             <tbody>
-                            {Object.keys(resultsData[selectedKey])
+                            {Object.keys(resultsData[selectedKey]['outliers'])
                                 .sort((a, b) => toNumber(a) - toNumber(b))
                                 .map((innerKey, index, array) => {
-                                    const current = resultsData[selectedKey][innerKey];
-                                    const previous = index > 0 ? resultsData[selectedKey][array[index - 1]] : {};
+                                    const current = resultsData[selectedKey]['outliers'][innerKey];
+                                    const previous = index > 0 ? resultsData[selectedKey]['outliers'][array[index - 1]] : {};
 
                                     const occurrences: { [key: string]: number } = {};
                                     for (const [key, value] of Object.entries(current)) {
@@ -104,7 +109,7 @@ const HistoryPage = () => {
                                         return null;
                                     }
 
-                                    const threshold = 100 - toNumber(innerKey);
+                                    const threshold = 100 - toNumber(innerKey); // Convert threshold to 100-threshold
 
                                     return (
                                         <tr key={innerKey}>
@@ -126,7 +131,76 @@ const HistoryPage = () => {
                             </tfoot>
                         </table>
                     )}
+                    <h2 style={{fontSize: '60px', marginTop: '20px', marginBottom: '20px'}}>Patterns</h2>
+                    {resultsData[selectedKey] && resultsData[selectedKey]['patterns'] && (
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>System's Decision Making Confidence (%)</th>
+                                <th>Occurrences</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {Object.keys(resultsData[selectedKey]['patterns'])
+                                .sort((a, b) => toNumber(b) - toNumber(a)) // Sort in decreasing order
+                                .map((innerKey, index, array) => {
+                                    const current = resultsData[selectedKey]['patterns'][innerKey];
+                                    const previous =
+                                        index < array.length - 1
+                                            ? resultsData[selectedKey]['patterns'][array[index + 1]]
+                                            : {};
+
+                                    const patterns: { [key: string]: number } = {};
+                                    for (const [key, value] of Object.entries(current)) {
+                                        if (key in previous) {
+                                            patterns[key] = value;
+                                        }
+                                    }
+
+                                    if (Object.keys(patterns).length === 0) {
+                                        return null;
+                                    }
+
+                                    const threshold = toNumber(innerKey);
+
+                                    return (
+                                        <tr key={innerKey}>
+                                            <td
+                                                colSpan={1}
+                                                style={{
+                                                    borderTop: '1px solid black',
+                                                    borderRight: '1px solid black',
+                                                }}
+                                            >
+                                                {threshold}
+                                            </td>
+                                            <td colSpan={2} style={{borderTop: '1px solid black'}}>
+                                                <table>
+                                                    <tbody>
+                                                    {Object.entries(patterns).map(([pattern, value]) => (
+                                                        <tr key={pattern}>
+                                                            <td>{pattern}</td>
+                                                        </tr>
+                                                    ))}
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                            <tfoot>
+                            <tr>
+                                <td colSpan={2} style={{borderTop: '1px solid black'}}/>
+                            </tr>
+                            </tfoot>
+                        </table>
+                    )}
+
                 </div>
-            )}</div>);
+            )}
+        </div>
+    );
 };
+
 export default HistoryPage;

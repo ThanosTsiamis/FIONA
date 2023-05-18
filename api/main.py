@@ -47,7 +47,7 @@ def get_json_files():
 
 
 if __name__ == "__main__":
-    # app.run(host="0.0.0.0", debug=False)
+    app.run(host="0.0.0.0", debug=False)
     filename = "/json_dumps/dirty.csv"
     multiprocess = "False"
     big_dict = process(filename, multiprocess)
