@@ -83,11 +83,13 @@ const HistoryPage = () => {
                             </option>
                         ))}
                     </select>
+                    <h2 style={{fontSize: '60px', marginTop: '20px', marginBottom: '20px'}}>Outliers</h2>
                     {Object.keys(resultsData).length > 0 && (
                         <table>
                             <thead>
                             <tr>
                                 <th>System's Decision Making Confidence (%)</th>
+                                <th>Generalised Strings</th>
                                 <th>Occurrences</th>
                             </tr>
                             </thead>
@@ -117,8 +119,17 @@ const HistoryPage = () => {
                                                 style={{borderTop: '1px solid black', borderRight: '1px solid black'}}>
                                                 {threshold}
                                             </td>
-                                            <td colSpan={2} style={{borderTop: '1px solid black'}}>
-                                                <pre>{JSON.stringify(occurrences, null, 4)}</pre>
+                                            <td colSpan={1}
+                                                style={{borderTop: '1px solid black', borderRight: '1px solid black'}}>
+                                                {Object.keys(occurrences).map(key => (
+                                                    <div key={key}>{key}</div>
+                                                ))}
+                                            </td>
+                                            <td colSpan={1}
+                                                style={{borderTop: '1px solid black', borderRight: '1px solid black'}}>
+                                                {Object.values(occurrences).map(value => (
+                                                    <div key={value}>{JSON.stringify(value)}</div>
+                                                ))}
                                             </td>
                                         </tr>
                                     );
@@ -131,13 +142,14 @@ const HistoryPage = () => {
                             </tfoot>
                         </table>
                     )}
+
                     <h2 style={{fontSize: '60px', marginTop: '20px', marginBottom: '20px'}}>Patterns</h2>
                     {resultsData[selectedKey] && resultsData[selectedKey]['patterns'] && (
                         <table>
                             <thead>
                             <tr>
                                 <th>System's Decision Making Confidence (%)</th>
-                                <th>Occurrences</th>
+                                <th>Generalised Strings</th>
                             </tr>
                             </thead>
                             <tbody>

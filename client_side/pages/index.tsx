@@ -20,7 +20,7 @@ function FileUploadForm() {
             return;
         }
         const fileSizeInMb = file.size / (1024 * 1024);
-        const maxFileSizeInMb = 3;
+        const maxFileSizeInMb = 1;
 
         if (fileSizeInMb > maxFileSizeInMb) {
             setError('File is too large to be previewed on screen and will slow down your computer');

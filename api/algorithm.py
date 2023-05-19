@@ -15,7 +15,7 @@ def read_data(filename):
     elif file_extension == "json":
         return pd.read_json(filename)
     else:
-        return print("DATABASE NOT YET SUPPORTED")
+        raise ValueError("Unsupported file format. Only CSV, XLSX, and JSON formats are supported.")
 
 
 def process_data(dataframe: pd.DataFrame):
@@ -94,8 +94,8 @@ def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
 
 def calculate_machine_limit():
     """
-        A fast way to force memory overflow in order to see the capabilities of the machine.Not a deterministic process.
-    :return: the maximum k of a kxk matrix which **can** fit in main memory.
+    Find the maximum size of an empty NumPy matrix that can be created without causing a memory overflow.
+    :return: the maximum size of the matrix.
     """
     try:
         for i in range(1000, 200000, 1000):
@@ -127,54 +127,52 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
         children_identifiers = feature_to_split_on(specificity_level=current_node.specificity_level,
                                                    df=current_node.data, name=current_node.name)
         if current_node.specificity_level == -2:
-            limit_of_machine = calculate_machine_limit()
-            if (np.unique(current_node.data[:, 0]).size > int(0.95 * current_node.data[:, 0].size)) or (
-                    np.unique(current_node.data[:, 0]).size > limit_of_machine):
+            if np.unique(current_node.data[:, 0]).size > int(0.95 * current_node.data[:, 0].size):
                 if len(children_identifiers) == 1:
                     if children_identifiers[0] == {'d'} or children_identifiers[0] == {'d', 's'}:
                         # TODO:Fix the latter case e.g. sddssdds
                         continue
-                if len(children_identifiers) > 7:
-                    # TODO:THINK OF ANOTHER CUSTOM LIMIT. OR HOW TO DO IT EFFICIENTLY
-                    custom_limit = 600
-                    fifteen_percent_of_limit = int(0.15 * custom_limit)
-                    eightyfive_percent_of_limit = int(0.85 * custom_limit)
-                    children_occ_dict = {}
-                    new_dict = {}
-                    appearances = {}
-                    # pruning_preparations = True
-                    for kid in children_identifiers:
-                        appearance = np.unique(current_node.data[current_node.data[:, 1] == kid][:, 0])
-                        appearances[frozenset(kid)] = appearance
-                        children_occ_dict[frozenset(kid)] = appearance.size
-                    sorted_values = sorted(children_occ_dict.values())
-                    for value in sorted_values:
-                        key = next((k for k, v in children_occ_dict.items() if v == value), None)
-                        if value <= fifteen_percent_of_limit:
-                            new_dict[key] = value  # add the key-value pair to the new dictionary
-                            del children_occ_dict[key]
-                            fifteen_percent_of_limit -= value
-                        else:
-                            new_dict[key] = fifteen_percent_of_limit
-                            children_occ_dict[key] = value - fifteen_percent_of_limit
-                            # fifteen_percent_of_limit=0
-                            break
-                    total_sum = sum(children_occ_dict.values())
-                    remaining_occ_percentage = {}
-                    for key in children_occ_dict:
-                        remaining_occ_percentage[key] = children_occ_dict[key] / total_sum
-                    minimum_85_and_total_sum = min(eightyfive_percent_of_limit, total_sum)
-                    for key in remaining_occ_percentage:
-                        if key in new_dict:
-                            new_dict[key] += int(remaining_occ_percentage[key] * minimum_85_and_total_sum)
-                        else:
-                            new_dict[key] = int(remaining_occ_percentage[key] * minimum_85_and_total_sum)
-                    pile_of_data = np.empty((0, 2))
-                    for key in new_dict:
-                        elements_to_be_kept = appearances[key][:new_dict[key]]
-                        mask = np.where(np.isin(current_node.data[:, 0], elements_to_be_kept))[0]
-                        pile_of_data = np.vstack((pile_of_data, current_node.data[mask]))
-                    current_node.data = pile_of_data
+                # if len(children_identifiers) > 7:
+                #     # TODO:THINK OF ANOTHER CUSTOM LIMIT. OR HOW TO DO IT EFFICIENTLY
+                #     custom_limit = 600
+                #     fifteen_percent_of_limit = int(0.15 * custom_limit)
+                #     eightyfive_percent_of_limit = int(0.85 * custom_limit)
+                #     children_occ_dict = {}
+                #     new_dict = {}
+                #     appearances = {}
+                #     # pruning_preparations = True
+                #     for kid in children_identifiers:
+                #         appearance = np.unique(current_node.data[current_node.data[:, 1] == kid][:, 0])
+                #         appearances[frozenset(kid)] = appearance
+                #         children_occ_dict[frozenset(kid)] = appearance.size
+                #     sorted_values = sorted(children_occ_dict.values())
+                #     for value in sorted_values:
+                #         key = next((k for k, v in children_occ_dict.items() if v == value), None)
+                #         if value <= fifteen_percent_of_limit:
+                #             new_dict[key] = value  # add the key-value pair to the new dictionary
+                #             del children_occ_dict[key]
+                #             fifteen_percent_of_limit -= value
+                #         else:
+                #             new_dict[key] = fifteen_percent_of_limit
+                #             children_occ_dict[key] = value - fifteen_percent_of_limit
+                #             # fifteen_percent_of_limit=0
+                #             break
+                #     total_sum = sum(children_occ_dict.values())
+                #     remaining_occ_percentage = {}
+                #     for key in children_occ_dict:
+                #         remaining_occ_percentage[key] = children_occ_dict[key] / total_sum
+                #     minimum_85_and_total_sum = min(eightyfive_percent_of_limit, total_sum)
+                #     for key in remaining_occ_percentage:
+                #         if key in new_dict:
+                #             new_dict[key] += int(remaining_occ_percentage[key] * minimum_85_and_total_sum)
+                #         else:
+                #             new_dict[key] = int(remaining_occ_percentage[key] * minimum_85_and_total_sum)
+                #     pile_of_data = np.empty((0, 2))
+                #     for key in new_dict:
+                #         elements_to_be_kept = appearances[key][:new_dict[key]]
+                #         mask = np.where(np.isin(current_node.data[:, 0], elements_to_be_kept))[0]
+                #         pile_of_data = np.vstack((pile_of_data, current_node.data[mask]))
+                #     current_node.data = pile_of_data
         # if pruning_preparations == True and current_node.specificity_level == -1:
         if current_node.specificity_level == 0 and len(current_node.data[0, 0]) > 34:
             continue
@@ -303,6 +301,8 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     tries = 0  # failsafe mechanism
     while True or tries < 40:
         leaves = root.leaves
+        print("LENGTH OF LEAVES")
+        print(len(leaves))
         if len(leaves) < machine_limit:
             break
         else:
@@ -384,7 +384,7 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     previous_threshold_dict_value = -1
     marked_for_clearance = []
     for threshold_level in col_outliers_and_patterns['outliers'].keys():
-        if threshold_level<50:
+        if threshold_level < 50:
 
             lexicon[column]['outliers'][threshold_level] = {}
             inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
@@ -418,7 +418,7 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
             inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
             pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
             for pattern in pattern_set:
-                lexicon[column]['patterns'][threshold_level][pattern]={}
+                lexicon[column]['patterns'][threshold_level][pattern] = {}
             for pattern_rep in col_outliers_and_patterns['patterns'][threshold_level].keys():
                 first_patterns_element = list(col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])[0]
                 generalised_pattern = generalise_string(first_patterns_element)
@@ -459,12 +459,13 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
         # dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
         # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalDirty.csv")
+        dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/tax/taxClean.csv")
-        dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/flightsDirty.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/flightsDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/beers/beersClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
+        # dataframe = read_data("resources/json_dumps/Crimes_-_2001_to_Present.csv")
 
     output = {}
 
@@ -478,6 +479,6 @@ def process(file: str, multiprocess_switch):
             output.update(res)
     else:
         for column in dataframe.columns:
-            if column == "src":
+            if column != "Provid1231231231erNumber":
                 output.update(add_outlying_elements_to_attribute(column, dataframe))
     return output
