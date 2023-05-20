@@ -45,11 +45,15 @@ def get_json_files():
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
+# @app.route("/api/oops",methods=["POST"])
+# def handle_error():
+#
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=False)
+    # app.run(host="0.0.0.0", debug=False)
     filename = "/json_dumps/dirty.csv"
-    multiprocess = "False"
+    multiprocess = "True"
     big_dict = process(filename, multiprocess)
     json_serialised = json.dumps(big_dict)
     with open("resources/json_dumps" + "jhjhbjhbhj.json", "w") as outfile:

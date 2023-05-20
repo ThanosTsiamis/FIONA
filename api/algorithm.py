@@ -1,5 +1,6 @@
 import gc
 
+import joblib
 import numpy as np
 import pandas as pd
 from anytree import Node
@@ -9,7 +10,7 @@ from joblib import Parallel, delayed
 def read_data(filename):
     file_extension = filename.split(".")[-1]
     if file_extension == "csv":
-        return pd.read_csv(filename, dtype=str)
+        return pd.read_csv(filename, dtype=str, encoding='utf-8-sig')
     elif file_extension == "xlsx":
         return pd.read_excel(filename)
     elif file_extension == "json":
@@ -119,15 +120,17 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     # pruning_preparations = False
+    limit = calculate_machine_limit()
     while node_list:
         current_node = node_list.pop(0)
         child_list = []
-        if np.unique(current_node.data[:, 0]).shape[0] < nDistinctMin and current_node.specificity_level > 0:
+        uniques = np.unique(current_node.data[:, 0])
+        if uniques.shape[0] < nDistinctMin and current_node.specificity_level > 0:
             continue
         children_identifiers = feature_to_split_on(specificity_level=current_node.specificity_level,
                                                    df=current_node.data, name=current_node.name)
         if current_node.specificity_level == -2:
-            if np.unique(current_node.data[:, 0]).size > int(0.95 * current_node.data[:, 0].size):
+            if uniques.size > int(0.95 * current_node.data[:, 0].size):
                 if len(children_identifiers) == 1:
                     if children_identifiers[0] == {'d'} or children_identifiers[0] == {'d', 's'}:
                         # TODO:Fix the latter case e.g. sddssdds
@@ -217,6 +220,8 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
             if breaking_flag:
                 break
         current_node.children = child_list
+        if len(root.leaves) > limit:
+            break
     return root
 
 
@@ -295,7 +300,6 @@ def score_function(leaves: tuple):
 def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     column = attribute_to_process
     attribute = process_data(pd.DataFrame(dataframe[column]))
-    machine_limit = calculate_machine_limit()
     root = tree_grow(attribute)
     ndistinct = 2
     tries = 0  # failsafe mechanism
@@ -303,7 +307,7 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
         leaves = root.leaves
         print("LENGTH OF LEAVES")
         print(len(leaves))
-        if len(leaves) < machine_limit:
+        if len(leaves) < calculate_machine_limit():
             break
         else:
             str_x = str(ndistinct)
@@ -315,6 +319,7 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
                 ndistinct += 1
             root = tree_grow(attribute, nDistinctMin=ndistinct)
             tries += 1
+    print("N distinct value is " + str(ndistinct))
     print(attribute)
     matrices_packet = score_function(leaves)
     score_matrix = matrices_packet[3]
@@ -444,7 +449,11 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
 
 
 def process_column(column, dataframe):
-    return add_outlying_elements_to_attribute(column, dataframe)
+    try:
+        return add_outlying_elements_to_attribute(column, dataframe), {}
+    except MemoryError:
+        print("Out of memory error occurred for column:", column)
+        return {}, column
 
 
 def process(file: str, multiprocess_switch):
@@ -459,26 +468,30 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
         # dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
         # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
-        dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalClean.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/tax/taxClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/flightsDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/beers/beersClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/Lottery_Powerball_Winning_Numbers__Beginning_2010.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
-        # dataframe = read_data("resources/json_dumps/Crimes_-_2001_to_Present.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/banklist.csv")
+        dataframe = read_data("resources/json_dumps/Crimes_-_2001_to_Present.csv")
 
-    output = {}
-
-    if multiprocess_switch == "True":
-        output = {}
+    with joblib.parallel_backend("threading"):
         results = Parallel(n_jobs=-1)(
             delayed(process_column)(column, dataframe) for column in dataframe.columns
         )
+    output = {}
+    error_columns = []
 
-        for res in results:
-            output.update(res)
-    else:
-        for column in dataframe.columns:
-            if column != "Provid1231231231erNumber":
-                output.update(add_outlying_elements_to_attribute(column, dataframe))
+    for result in results:
+        column_result, error_column = result
+        if error_column:
+            error_columns.append(error_column)
+        else:
+            output.update(column_result)
+    for column in error_columns:
+        output.update(add_outlying_elements_to_attribute(column, dataframe))
+
     return output
