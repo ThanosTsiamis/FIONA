@@ -90,18 +90,6 @@ function FileUploadForm() {
                     <div className="mb-4">
                         <input type="file" ref={fileInput} onChange={handleFileChange}/>
                     </div>
-                    <div className="flex items-center mb-4">
-                        <input
-
-                            type="checkbox"
-                            id="enable-parallel"
-                            checked={enableParallel}
-                            onChange={handleParallelChange}
-                            className="mr-2"
-                        />
-                        <label htmlFor="enable-parallel">Enable Parallelization</label>
-                        {error && <div className="error">{error}</div>}
-                    </div>
                     <button type="submit"
                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
                             disabled={isLoading}>
