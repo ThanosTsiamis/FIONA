@@ -194,7 +194,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                 data_for_child = current_node.data[positions]
             elif current_node.specificity_level == -1:
                 length = np.vectorize(len)
-                if item < 34:
+                if item <= 34:
                     positions = np.nonzero(np.isin(length(current_node.data[:, 0]), item))
                     data_for_child = current_node.data[positions]
                 else:
@@ -478,7 +478,7 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/banklist.csv")
         dataframe = read_data("resources/json_dumps/Crimes_-_2001_to_Present.csv")
 
-    with joblib.parallel_backend("threading"):
+    with joblib.parallel_backend("loky"):
         results = Parallel(n_jobs=-1)(
             delayed(process_column)(column, dataframe) for column in dataframe.columns
         )
