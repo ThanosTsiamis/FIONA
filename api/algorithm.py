@@ -102,7 +102,7 @@ def calculate_machine_limit():
         for i in range(1000, 200000, 1000):
             in_memory_variable = np.empty([4, i, i], dtype='float32')
             gc.collect()
-    except:
+    except MemoryError:
         gc.collect()
         return i - 1000
 
@@ -119,7 +119,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     """
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
-    # pruning_preparations = False
+    long_column_limit = 36
     limit = calculate_machine_limit()
     while node_list:
         current_node = node_list.pop(0)
@@ -177,7 +177,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                 #         pile_of_data = np.vstack((pile_of_data, current_node.data[mask]))
                 #     current_node.data = pile_of_data
         # if pruning_preparations == True and current_node.specificity_level == -1:
-        if current_node.specificity_level == 0 and len(current_node.data[0, 0]) > 34:
+        if current_node.specificity_level == 0 and len(current_node.data[0, 0]) > long_column_limit:
             continue
         if len(children_identifiers) == 1 and current_node.specificity_level == len(str(current_node.data[0, 0])):
             continue
@@ -194,11 +194,11 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                 data_for_child = current_node.data[positions]
             elif current_node.specificity_level == -1:
                 length = np.vectorize(len)
-                if item <= 34:
+                if item <= long_column_limit:
                     positions = np.nonzero(np.isin(length(current_node.data[:, 0]), item))
                     data_for_child = current_node.data[positions]
                 else:
-                    positions = np.where(length(current_node.data[:, 0]) > 34)
+                    positions = np.where(length(current_node.data[:, 0]) > long_column_limit)
                     data_for_child = current_node.data[positions]
                     breaking_flag = True
             else:
@@ -476,7 +476,7 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/Lottery_Powerball_Winning_Numbers__Beginning_2010.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/banklist.csv")
-        dataframe = read_data("resources/json_dumps/Crimes_-_2001_to_Present.csv")
+        dataframe = read_data("resources/datasets/datasets_testing_purposes/Air_Traffic_Passenger_Statistics.csv")
 
     with joblib.parallel_backend("loky"):
         results = Parallel(n_jobs=-1)(
