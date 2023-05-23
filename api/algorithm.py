@@ -270,7 +270,7 @@ def score_function(leaves: tuple):
     except:
         gc.collect()
         matrix = np.empty([4, len(leaves), len(leaves)], dtype='float32')
-    matrix.fill(0)
+    matrix[:3].fill(0)
 
     # TODO: Maybe parallelise it here?
     for i in range(len(leaves)):
@@ -297,11 +297,19 @@ def score_function(leaves: tuple):
     return matrix
 
 
+def fibonacci_generator():
+    a, b = 2, 3
+    while True:
+        yield a
+        a, b = b, a + b
+
+
 def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     column = attribute_to_process
     attribute = process_data(pd.DataFrame(dataframe[column]))
     root = tree_grow(attribute)
     ndistinct = 2
+    fibonacci = fibonacci_generator()
     tries = 0  # failsafe mechanism
     while True or tries < 40:
         leaves = root.leaves
@@ -310,13 +318,7 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
         if len(leaves) < calculate_machine_limit():
             break
         else:
-            str_x = str(ndistinct)
-            if len(str_x) == 1:
-                ndistinct += 1
-            elif str_x[-1] == '9':
-                ndistinct = int('1' + '0' * len(str_x))
-            else:
-                ndistinct += 1
+            ndistinct = next(fibonacci)
             root = tree_grow(attribute, nDistinctMin=ndistinct)
             tries += 1
     print("N distinct value is " + str(ndistinct))
@@ -476,7 +478,8 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/Lottery_Powerball_Winning_Numbers__Beginning_2010.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/banklist.csv")
-        dataframe = read_data("resources/datasets/datasets_testing_purposes/Air_Traffic_Passenger_Statistics.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/Air_Traffic_Passenger_Statistics.csv")
+        dataframe = read_data("resources/datasets/datasets_testing_purposes/testing123.csv")
 
     with joblib.parallel_backend("loky"):
         results = Parallel(n_jobs=-1)(
