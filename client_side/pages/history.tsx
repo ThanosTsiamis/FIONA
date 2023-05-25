@@ -46,8 +46,8 @@ const HistoryPage = () => {
 
     // Helper function to convert a string to a number
     const toNumber = (str: string): number => {
-        const n = parseInt(str);
-        return isNaN(n) ? 0 : n;
+        const n = parseFloat(str);
+        return isNaN(n) ? 0 : Number(n.toFixed(4));
     };
 
     return (
