@@ -1,10 +1,12 @@
 import gc
+import logging
 
-import joblib
 import numpy as np
 import pandas as pd
 from anytree import Node
-from joblib import Parallel, delayed
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 def read_data(filename):
@@ -100,7 +102,7 @@ def calculate_machine_limit():
     """
     try:
         for i in range(1000, 200000, 1000):
-            in_memory_variable = np.empty([4, i, i], dtype='float32')
+            in_memory_variable = np.empty([i, i], dtype='float64')
             gc.collect()
     except MemoryError:
         gc.collect()
@@ -266,34 +268,27 @@ def score_function(leaves: tuple):
     max_depth = max([leaf.depth for leaf in leaves])
     try:
         gc.collect()
-        matrix = np.empty([4, len(leaves), len(leaves)], dtype='float32')
+        scoring_matrix = np.empty([len(leaves), len(leaves)], dtype='float64')
+
     except:
         gc.collect()
-        matrix = np.empty([4, len(leaves), len(leaves)], dtype='float32')
-    matrix[:3].fill(0)
+        scoring_matrix = np.empty([len(leaves), len(leaves)], dtype='float64')
 
     # TODO: Maybe parallelise it here?
     for i in range(len(leaves)):
         for j in range(i, len(leaves)):
-            if i == j:
-                matrix[0][i][j] = 0
-                matrix[1][i][j] = 0
-            else:
-                masses_multiplication = (leaves[i].data.shape[0] * leaves[j].data.shape[0])
-                matrix[0][i][j] = masses_multiplication
-
-                matrix[1][i][j] = (node_distance(leaves[i], leaves[j], max_depth)) ** 2
-
             masses_difference = abs(leaves[i].data.shape[0] - leaves[j].data.shape[0]) + 1
-            matrix[2][i][j] = masses_difference
+            if i == j:
+                scoring_matrix[i][j] = 0
+            else:
+                # masses multiplication
+                masses_multiplication = (leaves[i].data.shape[0] * leaves[j].data.shape[0])
 
-    outcome = np.divide(matrix[0], matrix[1], out=np.zeros_like(matrix[0]), where=matrix[1] != 0)
-    outcome = outcome + outcome.T
-    outcome2 = np.divide(outcome, matrix[2], out=np.zeros_like(outcome), where=matrix[2] != 0)
-    matrix[3] = outcome2 + outcome2.T
-    matrix[2] = matrix[2] + matrix[2].T
-    matrix[1] = matrix[1] + matrix[1].T
-    matrix[0] = matrix[0] + matrix[0].T
+                # calculate distance
+                distance = (node_distance(leaves[i], leaves[j], max_depth)) ** 2
+                scoring_matrix[i][j] = masses_multiplication * (1 / distance) * (1 / masses_difference)
+
+    matrix = scoring_matrix.T + scoring_matrix
     return matrix
 
 
@@ -313,18 +308,17 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
     tries = 0  # failsafe mechanism
     while True or tries < 40:
         leaves = root.leaves
-        print("LENGTH OF LEAVES")
-        print(len(leaves))
+        logger.debug(f"LENGTH OF LEAVES IS {len(leaves)}")
         if len(leaves) < calculate_machine_limit():
             break
         else:
             ndistinct = next(fibonacci)
+            logger.debug("Didn't manage to fit a tree. Building another one")
             root = tree_grow(attribute, nDistinctMin=ndistinct)
             tries += 1
-    print("N distinct value is " + str(ndistinct))
-    print(attribute)
-    matrices_packet = score_function(leaves)
-    score_matrix = matrices_packet[3]
+    logger.debug("N distinct value is " + str(ndistinct))
+    logger.debug(attribute)
+    score_matrix = score_function(leaves)
     medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
     output_dictionary = {}
     outlying_elements = {}
@@ -384,6 +378,28 @@ def compare_dicts(dict1, dict2):
     return True
 
 
+def over_the_limit_check():
+    return True
+
+
+def replace_repeated_chars(string):
+    if len(string) < 2:
+        return string
+
+    result = [string[0]]  # Add the first character to the result list
+    asterisk_added = False
+
+    for i in range(1, len(string)):
+        if string[i] != string[i - 1]:
+            result.append(string[i])
+            asterisk_added = False
+        elif not asterisk_added:
+            result.append('*')
+            asterisk_added = True
+
+    return ''.join(result)
+
+
 def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     col_outliers_and_patterns = process_attribute(column, dataframe)
     lexicon = {column: {'outliers': {}, 'patterns': {}}}
@@ -395,16 +411,56 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
 
             lexicon[column]['outliers'][threshold_level] = {}
             inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
-            pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
+            pattern_set = set()
+            for representation in inner_dicts.keys():
+                pattern_set.add(replace_repeated_chars(generalise_string(next(iter(inner_dicts[representation])))))
+            # pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
+            potential_outlier_in_pattern_set = 0
+            countermiss = 0
             for outlier_rep in col_outliers_and_patterns['outliers'][threshold_level].keys():
                 first_outliers_element = list(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])[0]
                 generalised_pattern = generalise_string(first_outliers_element)
-                if generalised_pattern in pattern_set:
+                regexed_string = replace_repeated_chars(generalised_pattern)
+                """TODO: Here we have a problem when dealing with many long names that seem to have somewhat the same
+                syntactical pattern. We need to find a way to solve this issue.
+                """
+                if regexed_string in pattern_set:
+                    potential_outlier_in_pattern_set += 1
                     continue
                 else:
-                    inner_dict = lexicon[column]['outliers'][threshold_level].get(generalised_pattern, {})
+                    countermiss += 1
+                    inner_dict = lexicon[column]['outliers'][threshold_level].get(regexed_string, {})
                     inner_dict.update(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])
-                    lexicon[column]['outliers'][threshold_level][generalised_pattern] = inner_dict
+                    lexicon[column]['outliers'][threshold_level][regexed_string] = inner_dict
+            # for representation in inner_dicts.keys():
+            #     pattern_set.add(generalise_string(next(iter(inner_dicts[representation]))))
+            #     # pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
+            # potential_outlier_in_pattern_set = 0
+            # countermiss = 0
+            # for outlier_rep in col_outliers_and_patterns['outliers'][threshold_level].keys():
+            #     first_outliers_element = list(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])[0]
+            #     generalised_pattern = generalise_string(first_outliers_element)
+            #     regexed_string = replace_repeated_chars(generalised_pattern)
+            #     """TODO: Here we have a problem when dealing with many long names that seem to have somewhat the same
+            #     syntactical pattern. We need to find a way to solve this issue.
+            #     """
+            #     if generalised_pattern in pattern_set:
+            #         potential_outlier_in_pattern_set += 1
+            #         continue
+            #     else:
+            #         countermiss += 1
+            #         inner_dict = lexicon[column]['outliers'][threshold_level].get(generalised_pattern, {})
+            #         inner_dict.update(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])
+            #         lexicon[column]['outliers'][threshold_level][generalised_pattern] = inner_dict
+            try:
+                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                print("Threshold level:" + str(threshold_level))
+                print("Outliers in pattern set: " + str(potential_outlier_in_pattern_set) + " AND not inside: " + str(
+                    countermiss) + " With a ratio of " + str(
+                    potential_outlier_in_pattern_set / (potential_outlier_in_pattern_set + countermiss)))
+            except:
+                print(" ")
+            print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
             if has_previous_threshold_dict:
                 current_dict = lexicon[column]['outliers'][threshold_level]
                 previous_dict = lexicon[column]['outliers'][previous_threshold_dict_value]
@@ -423,7 +479,10 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
         if threshold_level > 50:
             lexicon[column]['patterns'][threshold_level] = {}
             inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
-            pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
+            pattern_set = set()
+            for representation in inner_dicts.keys():
+                pattern_set.add(generalise_string(next(iter(inner_dicts[representation]))))
+            # pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
             for pattern in pattern_set:
                 lexicon[column]['patterns'][threshold_level][pattern] = {}
             for pattern_rep in col_outliers_and_patterns['patterns'][threshold_level].keys():
@@ -444,9 +503,7 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     for threshold_level in marked_for_clearance:
         del lexicon[column]['patterns'][threshold_level]
 
-    print("")
-
-    print("Finished " + column)
+    logger.debug("Finished " + column)
     return lexicon
 
 
@@ -454,7 +511,7 @@ def process_column(column, dataframe):
     try:
         return add_outlying_elements_to_attribute(column, dataframe), {}
     except MemoryError:
-        print("Out of memory error occurred for column:", column)
+        logger.debug("Out of memory error occurred for column:", column)
         return {}, column
 
 
@@ -476,25 +533,31 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/beers/beersClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/Lottery_Powerball_Winning_Numbers__Beginning_2010.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
+        dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/banklist.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/Air_Traffic_Passenger_Statistics.csv")
-        dataframe = read_data("resources/datasets/datasets_testing_purposes/testing123.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/testing123.csv")
 
-    with joblib.parallel_backend("loky"):
-        results = Parallel(n_jobs=-1)(
-            delayed(process_column)(column, dataframe) for column in dataframe.columns
-        )
+    # with joblib.parallel_backend("loky"):
+    #     results = Parallel(n_jobs=-1)(
+    #         delayed(process_column)(column, dataframe) for column in dataframe.columns
+    #     )
     output = {}
-    error_columns = []
+    # error_columns = []
+    #
+    # for result in results:
+    #     column_result, error_column = result
+    #     if error_column:
+    #         error_columns.append(error_column)
+    #     else:
+    #         output.update(column_result)
+    # for column in error_columns:
+    #     logger.debug("Computing the columns that errored")
+    #     output.update(add_outlying_elements_to_attribute(column, dataframe))
+    #
+    # return output
 
-    for result in results:
-        column_result, error_column = result
-        if error_column:
-            error_columns.append(error_column)
-        else:
-            output.update(column_result)
-    for column in error_columns:
-        output.update(add_outlying_elements_to_attribute(column, dataframe))
-
+    for column in dataframe.columns:
+        if column == "actors":
+            output.update(add_outlying_elements_to_attribute(column, dataframe))
     return output
