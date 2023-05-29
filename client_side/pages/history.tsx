@@ -125,10 +125,14 @@ const HistoryPage = () => {
                                                     <div key={key}>{key}</div>
                                                 ))}
                                             </td>
-                                            <td colSpan={1}
-                                                style={{borderTop: '1px solid black', borderRight: '1px solid black'}}>
-                                                {Object.values(occurrences).map(value => (
-                                                    <div key={value}>{JSON.stringify(value)}</div>
+                                            <td colSpan={1} className="border-t border-r border-black border-b">
+                                                {Object.values(occurrences).map((value, index) => (
+                                                    <div key={value}>
+                                                        {JSON.stringify(value)}
+                                                        {index !== Object.values(occurrences).length - 1 && (
+                                                            <hr className="border-dotted border-black my-1"/>
+                                                        )}
+                                                    </div>
                                                 ))}
                                             </td>
                                         </tr>

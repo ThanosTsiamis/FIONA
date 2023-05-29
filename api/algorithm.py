@@ -1,9 +1,11 @@
 import gc
 import logging
 
+import joblib
 import numpy as np
 import pandas as pd
 from anytree import Node
+from joblib import Parallel, delayed
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -400,67 +402,110 @@ def replace_repeated_chars(string):
     return ''.join(result)
 
 
+def choose_string_generalise_method():
+    return True
+
+
 def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     col_outliers_and_patterns = process_attribute(column, dataframe)
     lexicon = {column: {'outliers': {}, 'patterns': {}}}
     has_previous_threshold_dict = False
     previous_threshold_dict_value = -1
     marked_for_clearance = []
+    generalised_strings_ratio_sum = 0
+    generalised_strings_ratio_counter = 0
+    regexed_strings_ratio_sum = 0
+    regexed_strings_ratio_counter = 0
     for threshold_level in col_outliers_and_patterns['outliers'].keys():
         if threshold_level < 50:
-
             lexicon[column]['outliers'][threshold_level] = {}
             inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
-            pattern_set = set()
+            pattern_set_generalised = set()
+            pattern_set_regexed = set()
             for representation in inner_dicts.keys():
-                pattern_set.add(replace_repeated_chars(generalise_string(next(iter(inner_dicts[representation])))))
-            # pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
-            potential_outlier_in_pattern_set = 0
-            countermiss = 0
+                pattern_set_regexed.add(
+                    replace_repeated_chars(generalise_string(next(iter(inner_dicts[representation])))))
+                pattern_set_generalised.add(generalise_string(next(iter(inner_dicts[representation]))))
+            generalised_string_in_pattern_set = 0
+            regexed_string_in_pattern_set = 0
+            generalised_string_not_in_pattern_set = 0
+            regexed_string_not_in_pattern_set = 0
             for outlier_rep in col_outliers_and_patterns['outliers'][threshold_level].keys():
                 first_outliers_element = list(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])[0]
                 generalised_pattern = generalise_string(first_outliers_element)
                 regexed_string = replace_repeated_chars(generalised_pattern)
-                """TODO: Here we have a problem when dealing with many long names that seem to have somewhat the same
-                syntactical pattern. We need to find a way to solve this issue.
-                """
-                if regexed_string in pattern_set:
-                    potential_outlier_in_pattern_set += 1
+                if regexed_string in pattern_set_regexed:
+                    regexed_string_in_pattern_set += 1
                     continue
                 else:
-                    countermiss += 1
-                    inner_dict = lexicon[column]['outliers'][threshold_level].get(regexed_string, {})
-                    inner_dict.update(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])
-                    lexicon[column]['outliers'][threshold_level][regexed_string] = inner_dict
-            # for representation in inner_dicts.keys():
-            #     pattern_set.add(generalise_string(next(iter(inner_dicts[representation]))))
-            #     # pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
-            # potential_outlier_in_pattern_set = 0
-            # countermiss = 0
-            # for outlier_rep in col_outliers_and_patterns['outliers'][threshold_level].keys():
-            #     first_outliers_element = list(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])[0]
-            #     generalised_pattern = generalise_string(first_outliers_element)
-            #     regexed_string = replace_repeated_chars(generalised_pattern)
-            #     """TODO: Here we have a problem when dealing with many long names that seem to have somewhat the same
-            #     syntactical pattern. We need to find a way to solve this issue.
-            #     """
-            #     if generalised_pattern in pattern_set:
-            #         potential_outlier_in_pattern_set += 1
-            #         continue
-            #     else:
-            #         countermiss += 1
-            #         inner_dict = lexicon[column]['outliers'][threshold_level].get(generalised_pattern, {})
-            #         inner_dict.update(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])
-            #         lexicon[column]['outliers'][threshold_level][generalised_pattern] = inner_dict
+                    regexed_string_not_in_pattern_set += 1
+
+                if generalised_pattern in pattern_set_generalised:
+                    generalised_string_in_pattern_set += 1
+                    continue
+                else:
+                    generalised_string_not_in_pattern_set += 1
+            logger.debug("Threshold level:" + str(threshold_level))
             try:
-                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-                print("Threshold level:" + str(threshold_level))
-                print("Outliers in pattern set: " + str(potential_outlier_in_pattern_set) + " AND not inside: " + str(
-                    countermiss) + " With a ratio of " + str(
-                    potential_outlier_in_pattern_set / (potential_outlier_in_pattern_set + countermiss)))
+
+                ratio_generalised = generalised_string_in_pattern_set / (
+                        generalised_string_in_pattern_set + generalised_string_not_in_pattern_set)
+                generalised_strings_ratio_sum += ratio_generalised
+                generalised_strings_ratio_counter += 1
+                logger.debug("Generalised Ratio: " + str(ratio_generalised))
+
             except:
-                print(" ")
-            print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                logger.debug(" ")
+
+            try:
+                ratio_regexed = regexed_string_in_pattern_set / (
+                        regexed_string_in_pattern_set + regexed_string_not_in_pattern_set)
+                regexed_strings_ratio_sum += ratio_regexed
+                regexed_strings_ratio_counter += 1
+                logger.debug("Regexed ratio: " + str(ratio_regexed))
+
+            except:
+                logger.debug(" ")
+    try:
+        avg_regex_ratio = regexed_strings_ratio_sum / regexed_strings_ratio_counter
+    except:
+        avg_regex_ratio = 0
+    try:
+        avg_generalised_ratio = generalised_strings_ratio_sum / generalised_strings_ratio_counter
+    except:
+        avg_generalised_ratio = 0
+    logger.debug("AVG REGEX RATIO IS " + str(avg_regex_ratio))
+    logger.debug("AVG GENERALISED RATIO IS " + str(avg_generalised_ratio))
+    # if both zero then choose generalised.
+    apply_generalised_comparison = True
+    if avg_regex_ratio > avg_generalised_ratio and avg_regex_ratio < 0.98 and avg_regex_ratio > 0.42:
+        apply_generalised_comparison = False
+    logger.debug("Applying Generalised Comparison: " + str(apply_generalised_comparison))
+
+    for threshold_level in col_outliers_and_patterns['outliers'].keys():
+        if threshold_level < 50:
+            lexicon[column]['outliers'][threshold_level] = {}
+            inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
+            pattern_set = set()
+            for representation in inner_dicts.keys():
+                if apply_generalised_comparison:
+                    pattern_set.add(generalise_string(next(iter(inner_dicts[representation]))))
+
+                else:
+                    pattern_set.add(replace_repeated_chars(generalise_string(next(iter(inner_dicts[representation])))))
+            for outlier_rep in col_outliers_and_patterns['outliers'][threshold_level].keys():
+                first_outliers_element = list(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])[0]
+                transformed_string = generalise_string(first_outliers_element)
+                if not apply_generalised_comparison:
+                    transformed_string = replace_repeated_chars(transformed_string)
+
+                if transformed_string in pattern_set:
+                    continue
+                else:
+                    inner_dict = lexicon[column]['outliers'][threshold_level].get(transformed_string, {})
+                    inner_dict.update(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])
+                    lexicon[column]['outliers'][threshold_level][transformed_string] = inner_dict
+
             if has_previous_threshold_dict:
                 current_dict = lexicon[column]['outliers'][threshold_level]
                 previous_dict = lexicon[column]['outliers'][previous_threshold_dict_value]
@@ -481,17 +526,21 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
             inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
             pattern_set = set()
             for representation in inner_dicts.keys():
-                pattern_set.add(generalise_string(next(iter(inner_dicts[representation]))))
-            # pattern_set = {generalise_string(key) for inner_dict in inner_dicts.values() for key in inner_dict.keys()}
+                if apply_generalised_comparison:
+                    pattern_set.add(generalise_string(next(iter(inner_dicts[representation]))))
+                else:
+                    pattern_set.add(replace_repeated_chars(generalise_string(next(iter(inner_dicts[representation])))))
             for pattern in pattern_set:
                 lexicon[column]['patterns'][threshold_level][pattern] = {}
             for pattern_rep in col_outliers_and_patterns['patterns'][threshold_level].keys():
                 first_patterns_element = list(col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])[0]
-                generalised_pattern = generalise_string(first_patterns_element)
+                transformed_string = generalise_string(first_patterns_element)
+                if not apply_generalised_comparison:
+                    transformed_string = replace_repeated_chars(transformed_string)
 
-                inner_dict = lexicon[column]['patterns'][threshold_level].get(generalised_pattern, {})
+                inner_dict = lexicon[column]['patterns'][threshold_level].get(transformed_string, {})
                 inner_dict.update(col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])
-                lexicon[column]['patterns'][threshold_level][generalised_pattern] = inner_dict
+                lexicon[column]['patterns'][threshold_level][transformed_string] = inner_dict
 
             if has_previous_threshold_dict:
                 current_dict = lexicon[column]['patterns'][threshold_level]
@@ -538,26 +587,26 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/Air_Traffic_Passenger_Statistics.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/testing123.csv")
 
-    # with joblib.parallel_backend("loky"):
-    #     results = Parallel(n_jobs=-1)(
-    #         delayed(process_column)(column, dataframe) for column in dataframe.columns
-    #     )
+    with joblib.parallel_backend("loky"):
+        results = Parallel(n_jobs=-1)(
+            delayed(process_column)(column, dataframe) for column in dataframe.columns
+        )
     output = {}
-    # error_columns = []
-    #
-    # for result in results:
-    #     column_result, error_column = result
-    #     if error_column:
-    #         error_columns.append(error_column)
-    #     else:
-    #         output.update(column_result)
-    # for column in error_columns:
-    #     logger.debug("Computing the columns that errored")
-    #     output.update(add_outlying_elements_to_attribute(column, dataframe))
-    #
-    # return output
+    error_columns = []
 
-    for column in dataframe.columns:
-        if column == "actors":
-            output.update(add_outlying_elements_to_attribute(column, dataframe))
+    for result in results:
+        column_result, error_column = result
+        if error_column:
+            error_columns.append(error_column)
+        else:
+            output.update(column_result)
+    for column in error_columns:
+        logger.debug("Computing the columns that errored")
+        output.update(add_outlying_elements_to_attribute(column, dataframe))
+
     return output
+
+    # for column in dataframe.columns:
+    #     if column != "aaaaaaaaaaaaaa":
+    #         output.update(add_outlying_elements_to_attribute(column, dataframe))
+    # return output
