@@ -90,7 +90,8 @@ const ResultsPage = () => {
                             return (
                                 <tr key={innerKey}>
                                     <td colSpan={1}
-                                        style={{borderTop: '1px solid black', borderRight: '1px solid black'}}>
+                                        style={{borderTop: '1px solid black', borderRight: '1px solid black'}}
+                                        className={"text-center py-2"}>
                                         {threshold}
                                     </td>
                                     <td colSpan={1}
@@ -98,7 +99,8 @@ const ResultsPage = () => {
                                             borderTop: '1px solid black',
                                             borderRight: '1px solid black',
                                             borderBottom: '1px solid black'
-                                        }}>
+                                        }}
+                                        className={"text-center py-2"}>
                                         {Object.keys(occurrences).map(key => (
                                             <div key={key}>{key}</div>
                                         ))}

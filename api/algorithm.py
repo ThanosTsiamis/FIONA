@@ -268,13 +268,8 @@ def score_function(leaves: tuple):
     """
     # Order is depth,height,width
     max_depth = max([leaf.depth for leaf in leaves])
-    try:
-        gc.collect()
-        scoring_matrix = np.empty([len(leaves), len(leaves)], dtype='float64')
-
-    except:
-        gc.collect()
-        scoring_matrix = np.empty([len(leaves), len(leaves)], dtype='float64')
+    gc.collect()
+    scoring_matrix = np.empty([len(leaves), len(leaves)], dtype='float64')
 
     # TODO: Maybe parallelise it here?
     for i in range(len(leaves)):
@@ -483,7 +478,7 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     logger.debug("Applying Generalised Comparison: " + str(apply_generalised_comparison))
 
     for threshold_level in col_outliers_and_patterns['outliers'].keys():
-        if threshold_level < 50:
+        if threshold_level < list(col_outliers_and_patterns['outliers'].keys())[len(col_outliers_and_patterns['outliers'].keys()) // 2]:
             lexicon[column]['outliers'][threshold_level] = {}
             inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
             pattern_set = set()
@@ -521,7 +516,7 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     previous_threshold_dict_value = -1
     marked_for_clearance = []
     for threshold_level in sorted(col_outliers_and_patterns['patterns'].keys(), reverse=True):
-        if threshold_level > 50:
+        if threshold_level >= list(col_outliers_and_patterns['outliers'].keys())[len(col_outliers_and_patterns['outliers'].keys()) // 2]:
             lexicon[column]['patterns'][threshold_level] = {}
             inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
             pattern_set = set()
@@ -605,8 +600,8 @@ def process(file: str, multiprocess_switch):
         output.update(add_outlying_elements_to_attribute(column, dataframe))
 
     return output
-
+    # output = {}
     # for column in dataframe.columns:
-    #     if column != "aaaaaaaaaaaaaa":
+    #     if column != "acssstors":
     #         output.update(add_outlying_elements_to_attribute(column, dataframe))
     # return output
