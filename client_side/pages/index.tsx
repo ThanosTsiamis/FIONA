@@ -73,7 +73,7 @@ function FileUploadForm() {
     };
 
     return (
-        <div>
+        <div className={"flex flex-col h-screen justify-between"}>
             <Head>
                 <title>FIONA</title>
             </Head>
