@@ -2,7 +2,6 @@ import React, {useContext, useRef, useState} from 'react';
 import {useRouter} from 'next/router';
 import {UploadContext} from '../components/UploadContext';
 import Papa from 'papaparse';
-import Image from "next/image";
 import Head from "next/head";
 
 function FileUploadForm() {
@@ -131,12 +130,56 @@ function FileUploadForm() {
                     <span role="img" aria-label="book">📖</span>
                 </p>
             </div>
-            <footer className="fixed left-0 bottom-0 bg-gray-100 p-4">
-                <div className="sm:items-center sm:justify-between bg-gray-200 rounded-md p-4">
-                    <a href="https://www.uu.nl/en/" className="flex items-center mb-4 sm:mb-0">
-                        <Image src="/UU_logo_2021_EN_RGB.png" alt="Utrecht University Logo" width="158" height={64}/>
-                        <span className="self-center text-base whitespace-nowrap dark:text-white ml-4">Utrecht University</span>
-                    </a>
+            <footer
+                className="bg-neutral-100 text-center dark:bg-neutral-600 lg:text-left">
+                <div className="container p-6 text-neutral-800 dark:text-neutral-200">
+                    <div className="grid gap-4 lg:grid-cols-2">
+                        <div className="mb-6 md:mb-0">
+                            <h5 className="mb-2 font-medium uppercase">About</h5>
+
+                            <p className="mb-4">
+                                Fiona is the result of Thanos Tsiamis' master thesis, developed under the supervision of
+                                Dr. A.A.A. (Hakim) Qahtan for Utrecht University during the academic year 2022-2023.
+                            </p>
+                        </div>
+
+                        <div className="mb-6 md:mb-0">
+                            <h5 className="mb-2 font-medium uppercase">Links</h5>
+
+                            <ul className="mb-0 list-none">
+                                <li>
+                                    <a href="" className="text-neutral-800 dark:text-neutral-200"
+                                    >Github Repository</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="" className="text-neutral-800 dark:text-neutral-200"
+                                    >Master Thesis Paper (coming soon)</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="https://github.com/ThanosTsiamis" className="text-neutral-800 dark:text-neutral-200"
+                                    >Thanos Tsiamis's Github</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="https://github.com/qahtanaa" className="text-neutral-800 dark:text-neutral-200"
+                                    >Dr. A.A.A. (Hakim) Qahtan</a
+                                    >
+                                </li>
+
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    className="bg-neutral-200 p-4 text-center text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
+                    Developed at:
+                    <a
+                        className="text-neutral-800 dark:text-neutral-400"
+                        href="https://www.uu.nl/en/"
+                    >Utrecht University</a
+                    >
                 </div>
             </footer>
         </div>
