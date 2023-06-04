@@ -152,67 +152,55 @@ const HistoryPage = () => {
                         <table>
                             <thead>
                             <tr>
-                                <th>System's Decision Making Confidence (%)</th>
-                                <th>Generalised Strings</th>
+                                <th>Patterns</th>
+                                <th>Minimum Coverage</th>
                             </tr>
                             </thead>
                             <tbody>
-                            {Object.keys(resultsData[selectedKey]['patterns'])
-                                .map((innerKey, index, array) => {
-                                    const current = resultsData[selectedKey]['patterns'][innerKey];
-                                    const previous =
-                                        index < array.length - 1
-                                            ? resultsData[selectedKey]['patterns'][array[index + 1]]
-                                            : {};
+                            {Object.keys(resultsData[selectedKey]['patterns']).map((innerKey, index, array) => {
+                                const current = resultsData[selectedKey]['patterns'][innerKey];
+                                const previous =
+                                    index < array.length - 1
+                                        ? resultsData[selectedKey]['patterns'][array[index + 1]]
+                                        : {};
 
-                                    const patterns: { [key: string]: number } = {};
-                                    for (const [key, value] of Object.entries(current)) {
-                                        if (!(key in previous)) {
-                                            patterns[key] = value;
-                                        }
+                                const patterns: { [key: string]: number } = {};
+                                for (const [key, value] of Object.entries(current)) {
+                                    if (!(key in previous)) {
+                                        patterns[key] = value;
                                     }
+                                }
 
-                                    if (Object.keys(patterns).length === 0) {
-                                        return null;
-                                    }
+                                if (Object.keys(patterns).length === 0) {
+                                    return null;
+                                }
 
-                                    const threshold = toNumber(innerKey);
-
-                                    return (
-                                        <tr key={innerKey}>
-                                            <td
-                                                colSpan={1}
-                                                style={{
+                                return (
+                                    <>
+                                        {Object.entries(patterns).map(([pattern, value]) => (
+                                            <tr key={pattern}>
+                                                <td style={{
                                                     borderTop: '1px solid black',
                                                     borderRight: '1px solid black',
-                                                }}
-                                            >
-                                                {threshold}
-                                            </td>
-                                            <td colSpan={2} style={{borderTop: '1px solid black'}}>
-                                                <table>
-                                                    <tbody>
-                                                    {Object.entries(patterns).map(([pattern, value]) => (
-                                                        <tr key={pattern}>
-                                                            <td>{pattern}</td>
-                                                        </tr>
-                                                    ))}
-                                                    </tbody>
-                                                </table>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            }
-                            </tbody>
+                                                    borderBottom: '1px solid black',
+                                                    borderLeft: '1px solid black',
+                                                    textAlign:'center'
+                                                }}>{pattern}</td>
+                                                <td style={{
+                                                    borderTop: '1px solid black',
+                                                    borderRight: '1px solid black',
+                                                    borderBottom: '1px solid black',
+                                                    borderLeft: '1px solid black',
+                                                    textAlign:'center'
+                                                }}>{value.toFixed(4)}</td>
+                                            </tr>
+                                        ))}
+                                    </>
+                                );
+                            })}
 
-                            <tfoot>
-                            <tr>
-                                <td colSpan={2} style={{borderTop: '1px solid black'}}/>
-                            </tr>
-                            </tfoot>
-                        </table>
-                    )}
+                            </tbody>
+                        </table>)}
 
                 </div>
             )}

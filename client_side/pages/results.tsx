@@ -133,7 +133,7 @@ const ResultsPage = () => {
                     <thead>
                     <tr>
                         <th>Patterns</th>
-                        <th>Coverage</th>
+                        <th>Minimum Coverage</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -159,8 +159,20 @@ const ResultsPage = () => {
                             <>
                                 {Object.entries(patterns).map(([pattern, value]) => (
                                     <tr key={pattern}>
-                                        <td>{pattern}</td>
-                                        <td>{value.toFixed(4)}</td>
+                                        <td style={{
+                                            borderTop: '1px solid black',
+                                            borderRight: '1px solid black',
+                                            borderBottom: '1px solid black',
+                                            borderLeft: '1px solid black',
+                                            textAlign:'center'
+                                        }}>{pattern}</td>
+                                        <td style={{
+                                            borderTop: '1px solid black',
+                                            borderRight: '1px solid black',
+                                            borderBottom: '1px solid black',
+                                            borderLeft: '1px solid black',
+                                            textAlign:'center'
+                                        }}>{value.toFixed(4)}</td>
                                     </tr>
                                 ))}
                             </>
@@ -168,11 +180,6 @@ const ResultsPage = () => {
                     })}
 
                     </tbody>
-                    <tfoot>
-                    <tr>
-                        <td colSpan={2} style={{borderTop: '1px solid black'}}/>
-                    </tr>
-                    </tfoot>
                 </table>)}
         </div>
     );
