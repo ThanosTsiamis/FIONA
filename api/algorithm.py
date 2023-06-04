@@ -1,11 +1,9 @@
 import gc
 import logging
 
-import joblib
 import numpy as np
 import pandas as pd
 from anytree import Node
-from joblib import Parallel, delayed
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -349,6 +347,7 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
                 element_dict_outliers[leaves[j[0]].name] = dict(np.asarray((uniques, counts)).T)
             outlying_elements[threshold] = element_dict_outliers
             pattern_elements[threshold] = element_dict_patterns
+
     output_dictionary["outliers"] = outlying_elements
     output_dictionary["patterns"] = pattern_elements
     return output_dictionary
@@ -375,10 +374,6 @@ def compare_dicts(dict1, dict2):
     return True
 
 
-def over_the_limit_check():
-    return True
-
-
 def replace_repeated_chars(string):
     if len(string) < 2:
         return string
@@ -391,14 +386,26 @@ def replace_repeated_chars(string):
             result.append(string[i])
             asterisk_added = False
         elif not asterisk_added:
-            result.append('*')
+            result.append('+')
             asterisk_added = True
 
     return ''.join(result)
 
 
-def choose_string_generalise_method():
-    return True
+def find_difference_index(str1, str2):
+    str1 = str(str1)
+    str2 = str(str2)
+
+    length = min(len(str1), len(str2))
+
+    for i in range(length):
+        if str1[i] != str2[i]:
+            return i
+
+    if len(str1) != len(str2):
+        return length
+
+    return -1
 
 
 def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
@@ -412,7 +419,9 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     regexed_strings_ratio_sum = 0
     regexed_strings_ratio_counter = 0
     for threshold_level in col_outliers_and_patterns['outliers'].keys():
-        if threshold_level < 50:
+        if threshold_level < list(col_outliers_and_patterns['outliers'].keys())[
+            len(col_outliers_and_patterns['outliers'].keys()) // 2] and len(
+            list(col_outliers_and_patterns['outliers'].keys())) > 1:
             lexicon[column]['outliers'][threshold_level] = {}
             inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
             pattern_set_generalised = set()
@@ -440,14 +449,12 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
                     continue
                 else:
                     generalised_string_not_in_pattern_set += 1
-            logger.debug("Threshold level:" + str(threshold_level))
             try:
 
                 ratio_generalised = generalised_string_in_pattern_set / (
                         generalised_string_in_pattern_set + generalised_string_not_in_pattern_set)
                 generalised_strings_ratio_sum += ratio_generalised
                 generalised_strings_ratio_counter += 1
-                logger.debug("Generalised Ratio: " + str(ratio_generalised))
 
             except:
                 logger.debug(" ")
@@ -457,7 +464,6 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
                         regexed_string_in_pattern_set + regexed_string_not_in_pattern_set)
                 regexed_strings_ratio_sum += ratio_regexed
                 regexed_strings_ratio_counter += 1
-                logger.debug("Regexed ratio: " + str(ratio_regexed))
 
             except:
                 logger.debug(" ")
@@ -476,9 +482,10 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     if avg_regex_ratio > avg_generalised_ratio and avg_regex_ratio < 0.98 and avg_regex_ratio > 0.42:
         apply_generalised_comparison = False
     logger.debug("Applying Generalised Comparison: " + str(apply_generalised_comparison))
-
     for threshold_level in col_outliers_and_patterns['outliers'].keys():
-        if threshold_level < list(col_outliers_and_patterns['outliers'].keys())[len(col_outliers_and_patterns['outliers'].keys()) // 2]:
+        if threshold_level < list(col_outliers_and_patterns['outliers'].keys())[
+            len(col_outliers_and_patterns['outliers'].keys()) // 2] and len(
+            list(col_outliers_and_patterns['outliers'].keys())) > 1:
             lexicon[column]['outliers'][threshold_level] = {}
             inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
             pattern_set = set()
@@ -515,27 +522,47 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     has_previous_threshold_dict = False
     previous_threshold_dict_value = -1
     marked_for_clearance = []
+    helper_dict = {}
     for threshold_level in sorted(col_outliers_and_patterns['patterns'].keys(), reverse=True):
-        if threshold_level >= list(col_outliers_and_patterns['outliers'].keys())[len(col_outliers_and_patterns['outliers'].keys()) // 2]:
+        if threshold_level >= list(col_outliers_and_patterns['outliers'].keys())[
+            len(col_outliers_and_patterns['outliers'].keys()) // 2]:
+            helper_dict[threshold_level] = {}
             lexicon[column]['patterns'][threshold_level] = {}
-            inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
             pattern_set = set()
-            for representation in inner_dicts.keys():
-                if apply_generalised_comparison:
-                    pattern_set.add(generalise_string(next(iter(inner_dicts[representation]))))
-                else:
-                    pattern_set.add(replace_repeated_chars(generalise_string(next(iter(inner_dicts[representation])))))
-            for pattern in pattern_set:
-                lexicon[column]['patterns'][threshold_level][pattern] = {}
             for pattern_rep in col_outliers_and_patterns['patterns'][threshold_level].keys():
                 first_patterns_element = list(col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])[0]
+                # index_they_differ = find_difference_index(pattern_rep, first_patterns_element)
+                # transformed_string = str(pattern_rep)[:index_they_differ] + replace_repeated_chars(
+                #     str(pattern_rep)[index_they_differ:])
                 transformed_string = generalise_string(first_patterns_element)
+                # lexicon[column]['patterns'][threshold_level][transformed_string] = {}
+                # lexicon[column]['patterns'][threshold_level][transformed_string][pattern_rep] = {}
                 if not apply_generalised_comparison:
                     transformed_string = replace_repeated_chars(transformed_string)
 
                 inner_dict = lexicon[column]['patterns'][threshold_level].get(transformed_string, {})
                 inner_dict.update(col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])
                 lexicon[column]['patterns'][threshold_level][transformed_string] = inner_dict
+                # lexicon[column]['patterns'][threshold_level].get(transformed_string, {}).get(pattern_rep, {}).update(
+                #     col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])
+                pattern_set.add(transformed_string)
+
+            for outlier_representative in col_outliers_and_patterns['outliers'][threshold_level]:
+                first_outliers_element = \
+                    list(col_outliers_and_patterns['outliers'][threshold_level][outlier_representative])[0]
+                # index_they_differ = find_difference_index(outlier_representative, first_outliers_element)
+                # transformed_string = str(outlier_representative)[:index_they_differ] + replace_repeated_chars(
+                #     str(outlier_representative)[index_they_differ:])
+                transformed_string = generalise_string(first_outliers_element)
+                if not bool(helper_dict[threshold_level].get(transformed_string, {})):
+                    helper_dict[threshold_level][transformed_string] = {}
+                if not bool(helper_dict[threshold_level][transformed_string].get(outlier_representative,{})):
+                    helper_dict[threshold_level][transformed_string][outlier_representative] = {}
+                if not apply_generalised_comparison:
+                    transformed_string = replace_repeated_chars(transformed_string)
+                if transformed_string in pattern_set:
+                    temp_dict = col_outliers_and_patterns['outliers'][threshold_level][outlier_representative]
+                    helper_dict[threshold_level][transformed_string][outlier_representative].update(temp_dict)
 
             if has_previous_threshold_dict:
                 current_dict = lexicon[column]['patterns'][threshold_level]
@@ -546,6 +573,12 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
             previous_threshold_dict_value = threshold_level
     for threshold_level in marked_for_clearance:
         del lexicon[column]['patterns'][threshold_level]
+    total_number_of_elements_in_database = dataframe.shape[0]
+    # for threshold_level in lexicon[column]['patterns']:
+    #     for pattern in lexicon[column]['patterns'][threshold_level]:
+    #         total_sum = sum(lexicon[column]['patterns'][threshold_level][pattern].values())
+    #         lexicon[column]['patterns'][threshold_level][pattern] = total_sum / total_number_of_elements_in_database
+    # Compress the patterns here even further
 
     logger.debug("Finished " + column)
     return lexicon
@@ -563,45 +596,40 @@ def process(file: str, multiprocess_switch):
     try:
         dataframe = read_data("resources/json_dumps/" + file.filename)
     except AttributeError:
-        # dataframe = read_data("../resources/datasets/datasets_testing_purposes/testing123.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/testing123.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/dirty.csv")
         # dataframe = read_data("resources/json_dumps/flightsDirty.csv")
-        # dataframe = read_data("../resources/json_dumps/School_Learning_Modalities__2020-2021.csv")
-        # dataframe = read_data("../resources/json_dumps/pima-indians-diabetes.csv")
-        # dataframe = read_data("../resources/datasets/datasets_testing_purposes/10492-1.csv")
-        # dataframe = read_data("../resources/datasets/datasets_testing_purposes/16834-1.csv")
-        # dataframe = read_data("../resources/datasets/datasets_testing_purposes/adult.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalClean.csv")
+        dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/tax/taxClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/flightsDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/beers/beersClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/Lottery_Powerball_Winning_Numbers__Beginning_2010.csv")
-        dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/banklist.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/Air_Traffic_Passenger_Statistics.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/testing123.csv")
-
-    with joblib.parallel_backend("loky"):
-        results = Parallel(n_jobs=-1)(
-            delayed(process_column)(column, dataframe) for column in dataframe.columns
-        )
-    output = {}
-    error_columns = []
-
-    for result in results:
-        column_result, error_column = result
-        if error_column:
-            error_columns.append(error_column)
-        else:
-            output.update(column_result)
-    for column in error_columns:
-        logger.debug("Computing the columns that errored")
-        output.update(add_outlying_elements_to_attribute(column, dataframe))
-
-    return output
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
+    #
+    # with joblib.parallel_backend("loky"):
+    #     results = Parallel(n_jobs=-1)(
+    #         delayed(process_column)(column, dataframe) for column in dataframe.columns
+    #     )
     # output = {}
-    # for column in dataframe.columns:
-    #     if column != "acssstors":
-    #         output.update(add_outlying_elements_to_attribute(column, dataframe))
+    # error_columns = []
+    #
+    # for result in results:
+    #     column_result, error_column = result
+    #     if error_column:
+    #         error_columns.append(error_column)
+    #     else:
+    #         output.update(column_result)
+    # for column in error_columns:
+    #     logger.debug("Computing the columns that errored")
+    #     output.update(add_outlying_elements_to_attribute(column, dataframe))
+    #
     # return output
+    output = {}
+    for column in dataframe.columns:
+        if column == "PhoneNumber":
+            output.update(add_outlying_elements_to_attribute(column, dataframe))
+    return output
