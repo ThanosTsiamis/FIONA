@@ -152,8 +152,10 @@ const HistoryPage = () => {
                         <table>
                             <thead>
                             <tr>
-                                <th>Patterns</th>
+                                <th>Generic Patterns</th>
                                 <th>Minimum Coverage</th>
+                                <th>Specific Patterns</th>
+                                <th>Minimum coverage</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -192,13 +194,12 @@ const HistoryPage = () => {
                                                     borderBottom: '1px solid black',
                                                     borderLeft: '1px solid black',
                                                     textAlign:'center'
-                                                }}>{value.toFixed(4)}</td>
+                                                }}>{JSON.stringify(value)}</td>
                                             </tr>
                                         ))}
                                     </>
                                 );
                             })}
-
                             </tbody>
                         </table>)}
 
