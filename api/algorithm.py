@@ -288,7 +288,7 @@ def process_attribute(attribute_to_process: str, dataframe: pd.DataFrame):
         element_dict_patterns = {}
         outlier_threshold = np.percentile(medians, threshold)
         lower_outlying_indices = np.argwhere(medians < outlier_threshold)
-        pattern_indices = np.argwhere(medians > outlier_threshold)
+        pattern_indices = np.argwhere(medians >= outlier_threshold)
 
         if pattern_indices.shape[0] == previous_values[0] and lower_outlying_indices.shape[0] == previous_values[1]:
             continue
@@ -597,7 +597,7 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/testing123.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/dirty.csv")
         # dataframe = read_data("resources/json_dumps/flightsDirty.csv")
-        dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalClean.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/tax/taxClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/flightsDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/beers/beersClean.csv")
@@ -606,28 +606,28 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/banklist.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/Air_Traffic_Passenger_Statistics.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
+        dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
     #
-    with joblib.parallel_backend("loky"):
-        results = Parallel(n_jobs=-1)(
-            delayed(process_column)(column, dataframe) for column in dataframe.columns
-        )
-    output = {}
-    error_columns = []
-
-    for result in results:
-        column_result, error_column = result
-        if error_column:
-            error_columns.append(error_column)
-        else:
-            output.update(column_result)
-    for column in error_columns:
-        logger.debug("Computing the columns that errored")
-        output.update(add_outlying_elements_to_attribute(column, dataframe))
-
-    return output
+    # with joblib.parallel_backend("loky"):
+    #     results = Parallel(n_jobs=-1)(
+    #         delayed(process_column)(column, dataframe) for column in dataframe.columns
+    #     )
     # output = {}
-    # for column in dataframe.columns:
-    #     if column == "City":
-    #         output.update(add_outlying_elements_to_attribute(column, dataframe))
+    # error_columns = []
+    #
+    # for result in results:
+    #     column_result, error_column = result
+    #     if error_column:
+    #         error_columns.append(error_column)
+    #     else:
+    #         output.update(column_result)
+    # for column in error_columns:
+    #     logger.debug("Computing the columns that errored")
+    #     output.update(add_outlying_elements_to_attribute(column, dataframe))
+    #
     # return output
+    output = {}
+    for column in dataframe.columns:
+        if column == "Lord":
+            output.update(add_outlying_elements_to_attribute(column, dataframe))
+    return output
