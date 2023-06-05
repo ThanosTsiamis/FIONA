@@ -1,11 +1,10 @@
 import gc
 import logging
 
-import joblib
 import numpy as np
 import pandas as pd
 from anytree import Node
-from joblib import Parallel, delayed
+from doubledouble import DoubleDouble
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -121,9 +120,9 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     are found (nDistinctMin doesn't work at a specificity level < 0)
     :return: the root of the tree
     """
-    root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
+    root = Node(" ", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
-    long_column_limit = 36 #This is based on the length of a UUID
+    long_column_limit = 36  # This is based on the length of a UUID
     limit = calculate_machine_limit()
     while node_list:
         current_node = node_list.pop(0)
@@ -212,6 +211,27 @@ def node_distance(node1: Node, node2: Node, penalty: int):
         return specificity_sum + 4 + penalty_sum
 
 
+def score_sensitive_function(leaves):
+    max_depth = max([leaf.depth for leaf in leaves])
+
+    scoring_matrix = np.empty([len(leaves), len(leaves)], dtype=object)
+
+    for i in range(len(leaves)):
+        for j in range(i, len(leaves)):
+            masses_difference = abs(leaves[i].data.shape[0] - leaves[j].data.shape[0]) + 1
+            if i == j:
+                scoring_matrix[i][j] = DoubleDouble(0)
+            else:
+                masses_multiplication = DoubleDouble(leaves[i].data.shape[0] * leaves[j].data.shape[0])
+
+                distance = DoubleDouble(node_distance(leaves[i], leaves[j], max_depth)) ** 2
+                scoring_matrix[i][j] = masses_multiplication * (DoubleDouble(1) / distance) * (
+                        DoubleDouble(1) / masses_difference)
+    scoring_matrix = np.where(scoring_matrix == None, 0, scoring_matrix)
+    matrix = scoring_matrix.T + scoring_matrix
+    return matrix
+
+
 def score_function(leaves: tuple):
     """
         Computes a score for each pair of leaves. Score function depends on three quantities:
@@ -228,6 +248,7 @@ def score_function(leaves: tuple):
     max_depth = max([leaf.depth for leaf in leaves])
     gc.collect()
     scoring_matrix = np.empty([len(leaves), len(leaves)], dtype='float64')
+    score_flag = False
 
     # TODO: Maybe parallelise it here?
     for i in range(len(leaves)):
@@ -241,8 +262,12 @@ def score_function(leaves: tuple):
 
                 # calculate distance
                 distance = (node_distance(leaves[i], leaves[j], max_depth)) ** 2
-                scoring_matrix[i][j] = masses_multiplication * (1 / distance) * (1 / masses_difference)
-
+                score = masses_multiplication * (1 / distance) * (1 / masses_difference)
+                if score < 0 or score > 100000000000000000:
+                    score_flag = True
+                scoring_matrix[i][j] = score
+    if score_flag:
+        return score_sensitive_function(leaves)
     matrix = scoring_matrix.T + scoring_matrix
     return matrix
 
@@ -577,7 +602,8 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     for threshold_level in lexicon[column]['patterns']:
         lexicon[column]['patterns'][threshold_level] = merge_dictionaries(helper_dict[threshold_level],
                                                                           lexicon[column]['patterns'][threshold_level])
-    lexicon[column]['patterns'] = convert_to_percentage(lexicon[column]['patterns'], total_number_of_elements_in_database)
+    lexicon[column]['patterns'] = convert_to_percentage(lexicon[column]['patterns'],
+                                                        total_number_of_elements_in_database)
     logger.debug("Finished " + column)
     return lexicon
 
@@ -607,7 +633,7 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/banklist.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/Air_Traffic_Passenger_Statistics.csv")
         dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
-    #
+
     # with joblib.parallel_backend("loky"):
     #     results = Parallel(n_jobs=-1)(
     #         delayed(process_column)(column, dataframe) for column in dataframe.columns
