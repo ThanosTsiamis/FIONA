@@ -182,19 +182,29 @@ const HistoryPage = () => {
                                         {Object.entries(patterns).map(([pattern, value]) => (
                                             <tr key={pattern}>
                                                 <td style={{
-                                                    borderTop: '1px solid black',
-                                                    borderRight: '1px solid black',
-                                                    borderBottom: '1px solid black',
-                                                    borderLeft: '1px solid black',
-                                                    textAlign:'center'
+                                                    border: '1px solid black',
+                                                    textAlign: 'center'
                                                 }}>{pattern}</td>
+                                                <td style={{border: '1px solid black', textAlign: 'center'}}
+                                                >Athroisma
+                                                </td>
                                                 <td style={{
-                                                    borderTop: '1px solid black',
-                                                    borderRight: '1px solid black',
-                                                    borderBottom: '1px solid black',
-                                                    borderLeft: '1px solid black',
-                                                    textAlign:'center'
-                                                }}>{JSON.stringify(value)}</td>
+                                                    border: '1px solid black',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    {Object.keys(value).map((specific_patterns) =>
+                                                        <div>
+                                                            {specific_patterns}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td style={{
+                                                    border: '1px solid black',
+                                                    textAlign: 'center'
+                                                }}>
+
+                                                    Mikra Athroismata
+                                                </td>
                                             </tr>
                                         ))}
                                     </>
