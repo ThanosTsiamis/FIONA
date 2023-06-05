@@ -1,9 +1,11 @@
 import gc
 import logging
 
+import joblib
 import numpy as np
 import pandas as pd
 from anytree import Node
+from joblib import Parallel, delayed
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -121,7 +123,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     """
     root = Node("root", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
-    long_column_limit = 36
+    long_column_limit = 36 #This is based on the length of a UUID
     limit = calculate_machine_limit()
     while node_list:
         current_node = node_list.pop(0)
@@ -137,48 +139,6 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                     if children_identifiers[0] == {'d'} or children_identifiers[0] == {'d', 's'}:
                         # TODO:Fix the latter case e.g. sddssdds
                         continue
-                # if len(children_identifiers) > 7:
-                #     # TODO:THINK OF ANOTHER CUSTOM LIMIT. OR HOW TO DO IT EFFICIENTLY
-                #     custom_limit = 600
-                #     fifteen_percent_of_limit = int(0.15 * custom_limit)
-                #     eightyfive_percent_of_limit = int(0.85 * custom_limit)
-                #     children_occ_dict = {}
-                #     new_dict = {}
-                #     appearances = {}
-                #     # pruning_preparations = True
-                #     for kid in children_identifiers:
-                #         appearance = np.unique(current_node.data[current_node.data[:, 1] == kid][:, 0])
-                #         appearances[frozenset(kid)] = appearance
-                #         children_occ_dict[frozenset(kid)] = appearance.size
-                #     sorted_values = sorted(children_occ_dict.values())
-                #     for value in sorted_values:
-                #         key = next((k for k, v in children_occ_dict.items() if v == value), None)
-                #         if value <= fifteen_percent_of_limit:
-                #             new_dict[key] = value  # add the key-value pair to the new dictionary
-                #             del children_occ_dict[key]
-                #             fifteen_percent_of_limit -= value
-                #         else:
-                #             new_dict[key] = fifteen_percent_of_limit
-                #             children_occ_dict[key] = value - fifteen_percent_of_limit
-                #             # fifteen_percent_of_limit=0
-                #             break
-                #     total_sum = sum(children_occ_dict.values())
-                #     remaining_occ_percentage = {}
-                #     for key in children_occ_dict:
-                #         remaining_occ_percentage[key] = children_occ_dict[key] / total_sum
-                #     minimum_85_and_total_sum = min(eightyfive_percent_of_limit, total_sum)
-                #     for key in remaining_occ_percentage:
-                #         if key in new_dict:
-                #             new_dict[key] += int(remaining_occ_percentage[key] * minimum_85_and_total_sum)
-                #         else:
-                #             new_dict[key] = int(remaining_occ_percentage[key] * minimum_85_and_total_sum)
-                #     pile_of_data = np.empty((0, 2))
-                #     for key in new_dict:
-                #         elements_to_be_kept = appearances[key][:new_dict[key]]
-                #         mask = np.where(np.isin(current_node.data[:, 0], elements_to_be_kept))[0]
-                #         pile_of_data = np.vstack((pile_of_data, current_node.data[mask]))
-                #     current_node.data = pile_of_data
-        # if pruning_preparations == True and current_node.specificity_level == -1:
         if current_node.specificity_level == 0 and len(current_node.data[0, 0]) > long_column_limit:
             continue
         if len(children_identifiers) == 1 and current_node.specificity_level == len(str(current_node.data[0, 0])):
@@ -408,6 +368,45 @@ def find_difference_index(str1, str2):
     return -1
 
 
+def merge_dictionaries(dict1, dict2):
+    merged_dict = {}
+
+    # Merge dictionaries from dict1
+    for key, value in dict1.items():
+        if key in dict2:
+            merged_subdict = {}
+            for subkey, subvalue in value.items():
+                if subkey in dict2[key]:
+                    merged_subdict[subkey] = subvalue + dict2[key][subkey]
+                else:
+                    merged_subdict[subkey] = subvalue
+            for subkey, subvalue in dict2[key].items():
+                if subkey not in merged_subdict:
+                    merged_subdict[subkey] = subvalue
+            merged_dict[key] = merged_subdict
+        else:
+            merged_dict[key] = value
+
+    # Add dictionaries from dict2 that don't exist in dict1
+    for key, value in dict2.items():
+        if key not in merged_dict:
+            merged_dict[key] = value
+
+    return merged_dict
+
+
+def convert_to_percentage(data, number):
+    if isinstance(data, dict):
+        new_dict = {}
+        for key, value in data.items():
+            new_dict[key] = convert_to_percentage(value, number)
+        return new_dict
+    elif isinstance(data, int):
+        return data / number
+    else:
+        return data
+
+
 def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     col_outliers_and_patterns = process_attribute(column, dataframe)
     lexicon = {column: {'outliers': {}, 'patterns': {}}}
@@ -540,11 +539,12 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
                 if not apply_generalised_comparison:
                     transformed_string = replace_repeated_chars(transformed_string)
 
-                inner_dict = lexicon[column]['patterns'][threshold_level].get(transformed_string, {})
-                inner_dict.update(col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])
-                lexicon[column]['patterns'][threshold_level][transformed_string] = inner_dict
-                # lexicon[column]['patterns'][threshold_level].get(transformed_string, {}).get(pattern_rep, {}).update(
-                #     col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])
+                if not bool(lexicon[column]['patterns'][threshold_level].get(transformed_string, {})):
+                    lexicon[column]['patterns'][threshold_level][transformed_string] = {}
+                if not bool(lexicon[column]['patterns'][threshold_level][transformed_string].get(pattern_rep, {})):
+                    lexicon[column]['patterns'][threshold_level][transformed_string][pattern_rep] = {}
+                temp_pat_dict = col_outliers_and_patterns['patterns'][threshold_level][pattern_rep]
+                lexicon[column]['patterns'][threshold_level][transformed_string][pattern_rep].update(temp_pat_dict)
                 pattern_set.add(transformed_string)
 
             for outlier_representative in col_outliers_and_patterns['outliers'][threshold_level]:
@@ -554,13 +554,13 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
                 # transformed_string = str(outlier_representative)[:index_they_differ] + replace_repeated_chars(
                 #     str(outlier_representative)[index_they_differ:])
                 transformed_string = generalise_string(first_outliers_element)
-                if not bool(helper_dict[threshold_level].get(transformed_string, {})):
-                    helper_dict[threshold_level][transformed_string] = {}
-                if not bool(helper_dict[threshold_level][transformed_string].get(outlier_representative,{})):
-                    helper_dict[threshold_level][transformed_string][outlier_representative] = {}
                 if not apply_generalised_comparison:
                     transformed_string = replace_repeated_chars(transformed_string)
                 if transformed_string in pattern_set:
+                    if not bool(helper_dict[threshold_level].get(transformed_string, {})):
+                        helper_dict[threshold_level][transformed_string] = {}
+                    if not bool(helper_dict[threshold_level][transformed_string].get(outlier_representative, {})):
+                        helper_dict[threshold_level][transformed_string][outlier_representative] = {}
                     temp_dict = col_outliers_and_patterns['outliers'][threshold_level][outlier_representative]
                     helper_dict[threshold_level][transformed_string][outlier_representative].update(temp_dict)
 
@@ -574,12 +574,10 @@ def add_outlying_elements_to_attribute(column: str, dataframe: pd.DataFrame):
     for threshold_level in marked_for_clearance:
         del lexicon[column]['patterns'][threshold_level]
     total_number_of_elements_in_database = dataframe.shape[0]
-    # for threshold_level in lexicon[column]['patterns']:
-    #     for pattern in lexicon[column]['patterns'][threshold_level]:
-    #         total_sum = sum(lexicon[column]['patterns'][threshold_level][pattern].values())
-    #         lexicon[column]['patterns'][threshold_level][pattern] = total_sum / total_number_of_elements_in_database
-    # Compress the patterns here even further
-
+    for threshold_level in lexicon[column]['patterns']:
+        lexicon[column]['patterns'][threshold_level] = merge_dictionaries(helper_dict[threshold_level],
+                                                                          lexicon[column]['patterns'][threshold_level])
+    lexicon[column]['patterns'] = convert_to_percentage(lexicon[column]['patterns'], total_number_of_elements_in_database)
     logger.debug("Finished " + column)
     return lexicon
 
@@ -610,26 +608,26 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/Air_Traffic_Passenger_Statistics.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
     #
-    # with joblib.parallel_backend("loky"):
-    #     results = Parallel(n_jobs=-1)(
-    #         delayed(process_column)(column, dataframe) for column in dataframe.columns
-    #     )
-    # output = {}
-    # error_columns = []
-    #
-    # for result in results:
-    #     column_result, error_column = result
-    #     if error_column:
-    #         error_columns.append(error_column)
-    #     else:
-    #         output.update(column_result)
-    # for column in error_columns:
-    #     logger.debug("Computing the columns that errored")
-    #     output.update(add_outlying_elements_to_attribute(column, dataframe))
-    #
-    # return output
+    with joblib.parallel_backend("loky"):
+        results = Parallel(n_jobs=-1)(
+            delayed(process_column)(column, dataframe) for column in dataframe.columns
+        )
     output = {}
-    for column in dataframe.columns:
-        if column == "PhoneNumber":
-            output.update(add_outlying_elements_to_attribute(column, dataframe))
+    error_columns = []
+
+    for result in results:
+        column_result, error_column = result
+        if error_column:
+            error_columns.append(error_column)
+        else:
+            output.update(column_result)
+    for column in error_columns:
+        logger.debug("Computing the columns that errored")
+        output.update(add_outlying_elements_to_attribute(column, dataframe))
+
     return output
+    # output = {}
+    # for column in dataframe.columns:
+    #     if column == "City":
+    #         output.update(add_outlying_elements_to_attribute(column, dataframe))
+    # return output
