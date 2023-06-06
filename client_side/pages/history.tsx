@@ -155,16 +155,14 @@ const HistoryPage = () => {
                                 <th>Generic Patterns</th>
                                 <th>Minimum Coverage</th>
                                 <th>Specific Patterns</th>
-                                <th>Minimum coverage</th>
+                                <th>Minimum Coverage</th>
                             </tr>
                             </thead>
                             <tbody>
                             {Object.keys(resultsData[selectedKey]['patterns']).map((innerKey, index, array) => {
                                 const current = resultsData[selectedKey]['patterns'][innerKey];
                                 const previous =
-                                    index < array.length - 1
-                                        ? resultsData[selectedKey]['patterns'][array[index + 1]]
-                                        : {};
+                                    index < array.length - 1 ? resultsData[selectedKey]['patterns'][array[index + 1]] : {};
 
                                 const patterns: { [key: string]: number } = {};
                                 for (const [key, value] of Object.entries(current)) {
@@ -201,7 +199,12 @@ const HistoryPage = () => {
                                                             <div key={specificPattern}>{specificPattern}</div>
                                                         ))}
                                                     </td>
-
+                                                    <td style={{border: '1px solid black', textAlign: 'center'}}>
+                                                        {Object.values(current[pattern]).map((specificPatternValue) => (
+                                                            <div
+                                                                key={specificPatternValue}>{Number(specificPatternValue).toFixed(2)}</div>
+                                                        ))}
+                                                    </td>
                                                 </tr>
                                             );
                                         })}
