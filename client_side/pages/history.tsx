@@ -192,7 +192,7 @@ const HistoryPage = () => {
                                                         textAlign: 'center'
                                                     }}>{pattern}</td>
                                                     <td style={{border: '1px solid black', textAlign: 'center'}}>
-                                                        {sum.toFixed(2)}
+                                                        {sum.toFixed(5)}
                                                     </td>
                                                     <td style={{border: '1px solid black', textAlign: 'center'}}>
                                                         {Object.keys(current[pattern]).map((specificPattern) => (
@@ -200,9 +200,14 @@ const HistoryPage = () => {
                                                         ))}
                                                     </td>
                                                     <td style={{border: '1px solid black', textAlign: 'center'}}>
-                                                        {Object.values(current[pattern]).map((specificPatternValue) => (
-                                                            <div
-                                                                key={specificPatternValue}>{Number(specificPatternValue).toFixed(2)}</div>
+                                                        {Object.entries(current[pattern]).map(([specificPattern, specificPatternValue]) => (
+                                                            <div key={specificPattern}>
+                                                                {Object.entries(specificPatternValue).map(([nestedPattern, nestedPatternValue]) => (
+                                                                    <div key={nestedPattern}>
+                                                                        {Number(nestedPatternValue).toFixed(5)}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
                                                         ))}
                                                     </td>
                                                 </tr>
