@@ -51,6 +51,3 @@ if __name__ == "__main__":
     filename = "/json_dumps/dirty.csv"
     multiprocess = "True"
     big_dict = process(filename, multiprocess)
-    json_serialised = json.dumps(big_dict)
-    with open("resources/json_dumps" + "jhjhbjhbhj.json", "w") as outfile:
-        outfile.write(json_serialised)
