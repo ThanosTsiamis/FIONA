@@ -169,7 +169,7 @@ const HistoryPage = () => {
                                 const patterns: { [key: string]: number } = {};
                                 for (const [key, value] of Object.entries(current)) {
                                     if (!(key in previous)) {
-                                        patterns[key] = value;
+                                        patterns[key] = Object.values(value).reduce((acc, val) => acc + Number(val), 0);
                                     }
                                 }
 
@@ -179,39 +179,37 @@ const HistoryPage = () => {
 
                                 return (
                                     <>
-                                        {Object.entries(patterns).map(([pattern, value]) => (
-                                            <tr key={pattern}>
-                                                <td style={{
-                                                    border: '1px solid black',
-                                                    textAlign: 'center'
-                                                }}>{pattern}</td>
-                                                <td style={{border: '1px solid black', textAlign: 'center'}}
-                                                >Athroisma
-                                                </td>
-                                                <td style={{
-                                                    border: '1px solid black',
-                                                    textAlign: 'center'
-                                                }}>
-                                                    {Object.keys(value).map((specific_patterns) =>
-                                                        <div>
-                                                            {specific_patterns}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td style={{
-                                                    border: '1px solid black',
-                                                    textAlign: 'center'
-                                                }}>
-
-                                                    Mikra Athroismata
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {Object.entries(patterns).map(([pattern, value]) => {
+                                            const sum = value;
+                                            return (
+                                                <tr key={pattern}>
+                                                    <td style={{
+                                                        border: '1px solid black',
+                                                        textAlign: 'center'
+                                                    }}>{pattern}</td>
+                                                    <td style={{
+                                                        border: '1px solid black',
+                                                        textAlign: 'center'
+                                                    }}>Athroisma
+                                                    </td>
+                                                    <td style={{border: '1px solid black', textAlign: 'center'}}>
+                                                        {Object.keys(current[pattern]).map((specificPattern) => (
+                                                            <div key={specificPattern}>{specificPattern}</div>
+                                                        ))}
+                                                    </td>
+                                                    <td style={{border: '1px solid black', textAlign: 'center'}}>
+                                                        {sum.toFixed(2)}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </>
                                 );
                             })}
                             </tbody>
-                        </table>)}
+                        </table>
+                    )}
+
 
                 </div>
             )}
