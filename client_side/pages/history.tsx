@@ -169,7 +169,13 @@ const HistoryPage = () => {
                                 const patterns: { [key: string]: number } = {};
                                 for (const [key, value] of Object.entries(current)) {
                                     if (!(key in previous)) {
-                                        patterns[key] = Object.values(value).reduce((acc, val) => acc + Number(val), 0);
+                                        let sum = 0;
+                                        for (const nestedValue of Object.values(value)) {
+                                            for (const numericValue of Object.values(nestedValue)) {
+                                                sum += Number(numericValue);
+                                            }
+                                        }
+                                        patterns[key] = sum;
                                     }
                                 }
 
@@ -187,19 +193,15 @@ const HistoryPage = () => {
                                                         border: '1px solid black',
                                                         textAlign: 'center'
                                                     }}>{pattern}</td>
-                                                    <td style={{
-                                                        border: '1px solid black',
-                                                        textAlign: 'center'
-                                                    }}>Athroisma
+                                                    <td style={{border: '1px solid black', textAlign: 'center'}}>
+                                                        {sum.toFixed(2)}
                                                     </td>
                                                     <td style={{border: '1px solid black', textAlign: 'center'}}>
                                                         {Object.keys(current[pattern]).map((specificPattern) => (
                                                             <div key={specificPattern}>{specificPattern}</div>
                                                         ))}
                                                     </td>
-                                                    <td style={{border: '1px solid black', textAlign: 'center'}}>
-                                                        {sum.toFixed(2)}
-                                                    </td>
+
                                                 </tr>
                                             );
                                         })}
