@@ -128,11 +128,13 @@ const ResultsPage = () => {
             )}
 
             <h2 style={{fontSize: '60px', marginTop: '20px', marginBottom: '20px'}}>Patterns</h2>
-            {Object.keys(data).length > 0 && (
+            {data[selectedKey] && data[selectedKey]['patterns'] && (
                 <table>
                     <thead>
                     <tr>
-                        <th>Patterns</th>
+                        <th>Generic Patterns</th>
+                        <th>Minimum Coverage</th>
+                        <th>Specific Patterns</th>
                         <th>Minimum Coverage</th>
                     </tr>
                     </thead>
@@ -140,14 +142,18 @@ const ResultsPage = () => {
                     {Object.keys(data[selectedKey]['patterns']).map((innerKey, index, array) => {
                         const current = data[selectedKey]['patterns'][innerKey];
                         const previous =
-                            index < array.length - 1
-                                ? data[selectedKey]['patterns'][array[index + 1]]
-                                : {};
+                            index < array.length - 1 ? data[selectedKey]['patterns'][array[index + 1]] : {};
 
                         const patterns: { [key: string]: number } = {};
                         for (const [key, value] of Object.entries(current)) {
                             if (!(key in previous)) {
-                                patterns[key] = value;
+                                let sum = 0;
+                                for (const nestedValue of Object.values(value)) {
+                                    for (const numericValue of Object.values(nestedValue)) {
+                                        sum += Number(numericValue);
+                                    }
+                                }
+                                patterns[key] = sum;
                             }
                         }
 
@@ -157,30 +163,44 @@ const ResultsPage = () => {
 
                         return (
                             <>
-                                {Object.entries(patterns).map(([pattern, value]) => (
-                                    <tr key={pattern}>
-                                        <td style={{
-                                            borderTop: '1px solid black',
-                                            borderRight: '1px solid black',
-                                            borderBottom: '1px solid black',
-                                            borderLeft: '1px solid black',
-                                            textAlign:'center'
-                                        }}>{pattern}</td>
-                                        <td style={{
-                                            borderTop: '1px solid black',
-                                            borderRight: '1px solid black',
-                                            borderBottom: '1px solid black',
-                                            borderLeft: '1px solid black',
-                                            textAlign:'center'
-                                        }}>{value.toFixed(4)}</td>
-                                    </tr>
-                                ))}
+                                {Object.entries(patterns).map(([pattern, value]) => {
+                                    const sum = value;
+                                    return (
+                                        <tr key={pattern}>
+                                            <td style={{
+                                                border: '1px solid black',
+                                                textAlign: 'center'
+                                            }}>{pattern}</td>
+                                            <td style={{border: '1px solid black', textAlign: 'center'}}>
+                                                {sum.toFixed(5)}
+                                            </td>
+                                            <td style={{border: '1px solid black', textAlign: 'center'}}>
+                                                {Object.keys(current[pattern]).map((specificPattern) => (
+                                                    <div key={specificPattern}>{specificPattern}</div>
+                                                ))}
+                                            </td>
+                                            <td style={{border: '1px solid black', textAlign: 'center'}}>
+                                                {Object.entries(current[pattern]).map(([specificPattern, specificPatternValue]) => (
+                                                    <div key={specificPattern}>
+                                                        {Object.entries(specificPatternValue).map(([nestedPattern, nestedPatternValue]) => (
+                                                            <div key={nestedPattern}>
+                                                                {Number(nestedPatternValue).toFixed(5)}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ))}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </>
                         );
                     })}
-
                     </tbody>
-                </table>)}
+                </table>
+            )}
+
+
         </div>
     );
 };
