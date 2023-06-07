@@ -94,15 +94,18 @@ const ResultsPage = () => {
                                         className={"text-center py-2"}>
                                         {threshold}
                                     </td>
-                                    <td colSpan={1}
-                                        style={{
-                                            borderTop: '1px solid black',
-                                            borderRight: '1px solid black',
-                                            borderBottom: '1px solid black'
-                                        }}
-                                        className={"text-center py-2"}>
-                                        {Object.keys(occurrences).map(key => (
-                                            <div key={key}>{key}</div>
+                                    <td colSpan={1} style={{
+                                        borderTop: '1px solid black',
+                                        borderRight: '1px solid black',
+                                        borderBottom: '1px solid black'
+                                    }} className={"text-center py-2"}>
+                                        {Object.keys(occurrences).map((key, i) => (
+                                            <div key={key}>
+                                                {key}
+                                                {i !== Object.keys(occurrences).length - 1 && (
+                                                    <hr className="border-dotted border-black my-1"/>
+                                                )}
+                                            </div>
                                         ))}
                                     </td>
                                     <td colSpan={1} className="border-t border-r border-black border-b">
