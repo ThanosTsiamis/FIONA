@@ -1,10 +1,9 @@
 version: '3.7'
 networks:
   app-network:
-    external: false
 
 services:
-  api:
+  api-service:
     build:
       context: ./api
       dockerfile: Dockerfile
@@ -13,11 +12,11 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - FLASK_CONFIG=development
+      - "FLASK_CONFIG=development"
     networks:
       - app-network
 
-  client:
+  client-service:
     build:
       context: ./client_side
       dockerfile: Dockerfile
@@ -27,10 +26,10 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
-      - REACT_APP_SERVICE_URL=http://localhost:8080
-      - CHOKIDAR_USEPOLLING=true
+      - "NODE_ENV=development"
+      - "REACT_APP_SERVICE_URL=http://localhost:8080"
+      - "CHOKIDAR_USEPOLLING=true"
     depends_on:
-      - api
+      - api-service
     networks:
       - app-network

@@ -7,12 +7,12 @@ the supervision of Dr. A.A.A. (Hakim) Qahtan for the academic year of 2022 - 202
 FIONA aims to find erroneous values
 in a dataset.
 
-##How to run
+## How to run
 There are 2 ways to run the project: (i) Locally and (ii) in Docker.
 
 **We strongly advise towards the second way (Docker) due to its simplicity.**
 
-###Local execution
+### Local execution
 **Important Note**: Make sure that node.Js and Python are installed in your system.
 
 For the **front end**:
@@ -34,7 +34,7 @@ Explanation:
 - Install the necessary requirements in `requirements.txt` file
 - Run the command `python main.py`
 
-###Docker
+### Docker
 **Important Note**: A docker installation is required for it to work. More info on how to
 install it [here](https://docs.docker.com/get-docker/).
 
@@ -54,9 +54,9 @@ Note: Back-end resides at [http://localhost:5000](http://localhost:5000).
 
 
 
-##Note
+## Note
 Development was done on Windows 10 with Firefox and Chrome.
 
-##Contact
+## Contact
 We're always looking to improve our project, so any input you have is greatly appreciated. If you encounter any issues
 or bugs, please report them on our GitHub issues page.

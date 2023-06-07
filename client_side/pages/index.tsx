@@ -2,7 +2,6 @@ import React, {useContext, useRef, useState} from 'react';
 import {useRouter} from 'next/router';
 import {UploadContext} from '../components/UploadContext';
 import Papa from 'papaparse';
-import Image from "next/image";
 import Head from "next/head";
 
 function FileUploadForm() {
@@ -20,7 +19,7 @@ function FileUploadForm() {
             return;
         }
         const fileSizeInMb = file.size / (1024 * 1024);
-        const maxFileSizeInMb = 3;
+        const maxFileSizeInMb = 1;
 
         if (fileSizeInMb > maxFileSizeInMb) {
             setError('File is too large to be previewed on screen and will slow down your computer');
@@ -34,6 +33,7 @@ function FileUploadForm() {
             },
         });
     };
+
     const handleParallelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setEnableParallel(e.target.checked);
     };
@@ -64,7 +64,6 @@ function FileUploadForm() {
                 router.push(res.url);
             } else {
                 const data = await res.json();
-
             }
         } catch (err) {
             console.error(err);
@@ -73,83 +72,115 @@ function FileUploadForm() {
         }
     };
 
-    return (<div>
+    return (
+        <div className={"flex flex-col h-screen justify-between"}>
             <Head>
                 <title>FIONA</title>
             </Head>
-            <h1 className="mb-4 ml-10 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-1xl lg:text-5xl dark:text-white">FIONA:
-                Categorical Outlier
-                Detector</h1>
-            <p className="mb-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">Discover
-                hidden insights and unlock the true potential of your data with our cutting-edge categorical outlier
-                detection technology.</p>
-            <div className="flex items-center justify-center">
+            <h1 className="mb-4 ml-10 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-1xl lg:text-5xl dark:text-white">
+                FIONA: Categorical Outlier Detector
+            </h1>
+            <p className="mb-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">
+                Discover hidden insights and unlock the true potential of your data with our cutting-edge categorical
+                outlier detection technology.
+            </p>
+            <div className="flex flex-col items-center justify-center">
                 <form onSubmit={handleSubmit}>
-                    <input type="file" ref={fileInput} onChange={handleFileChange}/>
-                    <div className="flex items-center my-4">
-                        <input
-                            type="checkbox"
-                            id="enable-parallel"
-                            checked={enableParallel}
-                            onChange={handleParallelChange}
-                            className="mr-2"
-                        />
-                        <label htmlFor="enable-parallel">Enable Parallelization</label>
-                        {error && <div className="error">{error}</div>}
+                    <div className="mb-4">
+                        <input type="file" ref={fileInput} onChange={handleFileChange}/>
                     </div>
                     <button type="submit"
                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
-                            disabled={isLoading}>Upload
+                            disabled={isLoading}>
+                        Upload
                     </button>
-                    {isLoading && (
-                        <div className="flex items-center justify-center">
-                            <div
-                                className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
-                                role="status">
-    <span
-        className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]"
-    >Processing...</span
-    >
-                            </div>
-                        </div>
-                    )}
-                    <table>
-                        <thead>
-                        <tr>
-                            {csvData[0]?.map((header) => (
-                                <th key={header}>{header}</th>
-                            ))}
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {csvData.slice(1).map((row, index) => (
-                            <tr key={index}>
-                                {row.map((cell, index) => (
-                                    <td key={index}>{cell}</td>
-                                ))}
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
                 </form>
+                {isLoading && (
+                    <div className="flex items-center justify-center mt-4">
+                        <div
+                            className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+                            role="status">
+                            <span
+                                className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">Processing...</span>
+                        </div>
+                    </div>
+                )}
             </div>
+            <table className="mt-4">
+                <thead>
+                <tr>
+                    {csvData[0]?.map((header) => (
+                        <th key={header}>{header}</th>
+                    ))}
+                </tr>
+                </thead>
+                <tbody>
+                {csvData.slice(1).map((row, index) => (
+                    <tr key={index}>
+                        {row.map((cell, index) => (
+                            <td key={index}>{cell}</td>
+                        ))}
+                    </tr>
+                ))}
+                </tbody>
+            </table>
             <div className="border border-gray-200 rounded-md p-4 max-w-xs absolute top-8 right-8">
                 <p className="text-lg font-semibold">
-                    <a href="history" className="text-gray-800 no-underline hover:underline">History</a>
+                    <a href="history" className="text-gray-800 no-underline hover:underline">History</a>{" "}
+                    <span role="img" aria-label="book">📖</span>
                 </p>
             </div>
+            <footer
+                className="bg-neutral-100 text-center dark:bg-neutral-600 lg:text-left">
+                <div className="container p-6 text-neutral-800 dark:text-neutral-200">
+                    <div className="grid gap-4 lg:grid-cols-2">
+                        <div className="mb-6 md:mb-0">
+                            <h5 className="mb-2 font-medium uppercase">About</h5>
 
+                            <p className="mb-4">
+                                Fiona is the result of Thanos Tsiamis' master thesis, developed under the supervision of
+                                Dr. A.A.A. (Hakim) Qahtan for Utrecht University during the academic year 2022-2023.
+                            </p>
+                        </div>
 
-            <footer className="fixed inset-x-0 bottom-0">
-                <div className="sm:items-center sm:justify-between">
-                    <a href="https://www.uu.nl/en/" className="flex items-center mb-4 sm:mb-0">
-                        <Image src="/UU_logo_2021_EN_RGB.png"
-                               alt="Utrecht University Logo" width="158" height={64}/>
-                        <span
-                            className="self-center text-base whitespace-nowrap dark:text-white">Utrecht University</span>
-                    </a>
+                        <div className="mb-6 md:mb-0">
+                            <h5 className="mb-2 font-medium uppercase">Links</h5>
+
+                            <ul className="mb-0 list-none">
+                                <li>
+                                    <a href="" className="text-neutral-800 dark:text-neutral-200"
+                                    >Github Repository</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="" className="text-neutral-800 dark:text-neutral-200"
+                                    >Master Thesis Paper (coming soon)</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="https://github.com/ThanosTsiamis" className="text-neutral-800 dark:text-neutral-200"
+                                    >Thanos Tsiamis's Github</a
+                                    >
+                                </li>
+                                <li>
+                                    <a href="https://github.com/qahtanaa" className="text-neutral-800 dark:text-neutral-200"
+                                    >Dr. A.A.A. (Hakim) Qahtan</a
+                                    >
+                                </li>
+
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-
+                <div
+                    className="bg-neutral-200 p-4 text-center text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
+                    Developed at:
+                    <a
+                        className="text-neutral-800 dark:text-neutral-400"
+                        href="https://www.uu.nl/en/"
+                    >Utrecht University</a
+                    >
+                </div>
             </footer>
         </div>
     );
