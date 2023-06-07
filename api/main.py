@@ -13,7 +13,7 @@ def upload_file():
     if request.method == 'POST':
         f = request.files['file']
         f.save("resources/json_dumps/" + f.filename)
-        outlying_elements = process(file=f, multiprocess_switch=request.form['enableParallel'])
+        outlying_elements = process(f)
         json_serialised = json.dumps(outlying_elements)
         with open("resources/json_dumps/" + f.filename + ".json", "w") as outfile:
             outfile.write(json_serialised)
@@ -49,5 +49,6 @@ def get_json_files():
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True)
     filename = "/json_dumps/dirty.csv"
-    multiprocess = "True"
-    big_dict = process(filename, multiprocess)
+    big_dict = process(filename)
+    json_serialised = json.dumps(big_dict)
+

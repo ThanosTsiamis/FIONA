@@ -617,7 +617,7 @@ def process_column(column_name, single_column):
         return {}, column_name
 
 
-def process(file: str, multiprocess_switch):
+def process(file):
     try:
         dataframe = read_data("resources/json_dumps/" + file.filename)
     except AttributeError:
@@ -627,36 +627,35 @@ def process(file: str, multiprocess_switch):
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/Mass1.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/flightsDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/beers/beersClean.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
+        dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/Lottery_Powerball_Winning_Numbers__Beginning_2010.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/banklist.csv")
-        dataframe = read_data("resources/json_dumps/recs2009_public.csv")
+        # dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/Testing123.csv")
 
-        with joblib.parallel_backend("loky"):
-            try:
-                results = Parallel(n_jobs=-1)(
-                    delayed(process_column)(column, dataframe[column]) for column in dataframe.columns
-                )
-            except:
-                output = {}
-                for column in dataframe.columns:
-                    single_column = dataframe[column]
-                    output.update(add_outlying_elements_to_attribute(column, single_column))
-                return output
+    with joblib.parallel_backend("loky"):
+        try:
+            results = Parallel(n_jobs=-1)(
+                delayed(process_column)(column, dataframe[column]) for column in dataframe.columns
+            )
+        except:
+            output = {}
+            for column in dataframe.columns:
+                single_column = dataframe[column]
+                output.update(add_outlying_elements_to_attribute(column, single_column))
+            return output
 
-        output = {}
-        error_columns = []
+    output = {}
+    error_columns = []
 
-        for result in results:
-            column_result, error_column = result
-            if error_column:
-                error_columns.append(error_column)
-            else:
-                output.update(column_result)
-        for column in error_columns:
-            logger.debug("Computing the columns that errored")
-            single_column = dataframe[column]
-            output.update(add_outlying_elements_to_attribute(column, single_column))
-
-        return output
+    for result in results:
+        column_result, error_column = result
+        if error_column:
+            error_columns.append(error_column)
+        else:
+            output.update(column_result)
+    for column in error_columns:
+        logger.debug("Computing the columns that errored")
+        single_column = dataframe[column]
+        output.update(add_outlying_elements_to_attribute(column, single_column))
+    return output
