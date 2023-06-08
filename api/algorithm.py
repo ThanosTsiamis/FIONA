@@ -619,7 +619,7 @@ def process_column(column_name, single_column):
 
 def process(file):
     try:
-        dataframe = read_data("resources/json_dumps/" + file.filename)
+        dataframe = read_data("resources/data_repository/" + file.filename)
     except AttributeError:
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/hospitalDirty.csv")

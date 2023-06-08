@@ -1,7 +1,7 @@
 import json
 import os
 
-from flask import Flask, request, jsonify, redirect
+from flask import Flask, request, jsonify, redirect, Response
 
 from algorithm import process
 
@@ -12,7 +12,7 @@ app = Flask("FIONA")
 def upload_file():
     if request.method == 'POST':
         f = request.files['file']
-        f.save("resources/json_dumps/" + f.filename)
+        f.save("resources/data_repository/" + f.filename)
         outlying_elements = process(f)
         json_serialised = json.dumps(outlying_elements)
         with open("resources/json_dumps/" + f.filename + ".json", "w") as outfile:
@@ -25,12 +25,16 @@ def upload_file():
 @app.route("/api/fetch/<string:filename>", methods=['GET'])
 def fetch(filename):
     if filename.endswith(".json"):
-        with open("resources/json_dumps/" + filename) as f:
-            data = json.load(f)
+        filepath = "resources/json_dumps/" + filename
     else:
-        with open("resources/json_dumps/" + filename + ".json") as f:
-            data = json.load(f)
-    response = jsonify(data)
+        filepath = "resources/json_dumps/" + filename + ".json"
+
+    def generate_json():
+        with open(filepath) as f:
+            for line in f:
+                yield line.strip()
+
+    response = Response(generate_json(), content_type='application/json')
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
