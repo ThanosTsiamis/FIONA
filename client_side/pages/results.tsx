@@ -63,7 +63,7 @@ const ResultsPage = () => {
                     <thead>
                     <tr>
                         <th>System's Decision Making Confidence (%)</th>
-                        <th>Generalised Strings</th>
+                        <th>Generic Strings</th>
                         <th>Occurrences</th>
                     </tr>
                     </thead>
@@ -136,9 +136,9 @@ const ResultsPage = () => {
                     <thead>
                     <tr>
                         <th>Generic Patterns</th>
-                        <th>Minimum Coverage</th>
+                        <th>Minimum Ensured Coverage</th>
                         <th>Specific Patterns</th>
-                        <th>Minimum Coverage</th>
+                        <th>Minimum Ensured Coverage</th>
                     </tr>
                     </thead>
                     <tbody>

@@ -1,0 +1,2 @@
+# Ignore CSV files inside the json_dumps folder
+/resources/json_dumps/*.csv
