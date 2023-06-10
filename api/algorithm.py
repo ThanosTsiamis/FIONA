@@ -642,7 +642,7 @@ def process(file):
             output = {}
             for column in dataframe.columns:
                 single_column = dataframe[column]
-                output.update(add_outlying_elements_to_attribute(column, single_column))
+                output.update(process_column(column, single_column)[0])
             return output
 
     output = {}
