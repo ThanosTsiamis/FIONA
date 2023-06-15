@@ -21,7 +21,7 @@ def read_data(filename):
         encoding = result['encoding']
         return pd.read_csv(filename, dtype=str, encoding=encoding)
     elif file_extension == "xlsx":
-        return pd.read_excel(filename)
+        return pd.read_excel(filename, dtype=str)
     elif file_extension == "json":
         return pd.read_json(filename)
     else:
@@ -613,7 +613,7 @@ def process_column(column_name, single_column):
     try:
         return add_outlying_elements_to_attribute(column_name, single_column), {}
     except MemoryError:
-        logger.debug("Out of memory error occurred for column:", column_name)
+        logger.debug("Out of memory error occurred for column:" + str(column_name))
         return {}, column_name
 
 
