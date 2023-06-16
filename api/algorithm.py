@@ -24,6 +24,8 @@ def read_data(filename):
         return pd.read_excel(filename, dtype=str)
     elif file_extension == "json":
         return pd.read_json(filename)
+    elif file_extension == "tsv":
+        return pd.read_csv(filename, sep='\t', dtype=str)
     else:
         raise ValueError("Unsupported file format. Only CSV, XLSX, and JSON formats are supported.")
 
@@ -106,7 +108,8 @@ def calculate_machine_limit():
             gc.collect()
     except MemoryError:
         gc.collect()
-        return i - 1000
+        # take a lower bound to make room for the other variables as well.
+        return i - 8000
 
 
 def tree_grow(column: pd.DataFrame, nDistinctMin=2):
@@ -280,6 +283,16 @@ def fibonacci_generator():
         a, b = b, a + b
 
 
+def median_vector_can_fit(score_matrix):
+    try:
+        medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
+        gc.collect()
+        return True
+    except:
+        gc.collect()
+        return False
+
+
 def process_attribute(dataframe: pd.DataFrame):
     attribute = process_data(dataframe)
     root = tree_grow(attribute)
@@ -296,10 +309,29 @@ def process_attribute(dataframe: pd.DataFrame):
             logger.debug("Didn't manage to fit a tree. Building another one")
             root = tree_grow(attribute, nDistinctMin=ndistinct)
             tries += 1
+    score_matrix = score_function(leaves)
+    try:
+        medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
+    except:
+        logger.debug("Median vector cannot fit. Increasing ndistinct...")
+        ndistinct = next(fibonacci)
+        root = tree_grow(attribute, nDistinctMin=ndistinct)
+        leaves = root.leaves
+        score_matrix = score_function(leaves)
+        while not median_vector_can_fit(score_matrix):
+            if tries > 80:
+                break
+            ndistinct = next(fibonacci)  # Skip a level and directly go to the next three steps
+            ndistinct = next(fibonacci)  # We are probably talking about millions of lines
+            ndistinct = next(fibonacci)
+            logger.debug("Didn't manage to fit the median. Building another tree")
+            root = tree_grow(attribute, nDistinctMin=ndistinct)
+            leaves = root.leaves
+            score_matrix = score_function(leaves)
+            tries += 1
+        medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
     logger.debug("N distinct value is " + str(ndistinct))
     logger.debug(attribute)
-    score_matrix = score_function(leaves)
-    medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
     output_dictionary = {}
     outlying_elements = {}
     pattern_elements = {}
