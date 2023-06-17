@@ -1,5 +1,6 @@
 import gc
 import logging
+from datetime import datetime
 
 import chardet
 import joblib
@@ -11,15 +12,22 @@ from joblib import delayed, Parallel
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+memory_problems = False
+ndistinct_manually_set = False
+ndistinct_manual_setting = 2
+large_file = False
 
 
-def read_data(filename):
+def read_data(filename, column_name=None):
     file_extension = filename.split(".")[-1]
     if file_extension == "csv":
         with open(filename, 'rb') as f:
             result = chardet.detect(f.read())
         encoding = result['encoding']
-        return pd.read_csv(filename, dtype=str, encoding=encoding)
+        if column_name is not None:
+            return pd.read_csv(filename, dtype=str, encoding=encoding, usecols=[column_name])
+        else:
+            return pd.read_csv(filename, dtype=str, encoding=encoding)
     elif file_extension == "xlsx":
         return pd.read_excel(filename, dtype=str)
     elif file_extension == "json":
@@ -97,7 +105,7 @@ def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
         return set(word_split(df[:, 0]))
 
 
-def calculate_machine_limit():
+def calculate_machine_limit(low_on_memory=False):
     """
     Find the maximum size of an empty NumPy matrix that can be created without causing a memory overflow.
     :return: the maximum size of the matrix.
@@ -109,7 +117,10 @@ def calculate_machine_limit():
     except MemoryError:
         gc.collect()
         # take a lower bound to make room for the other variables as well.
-        return i - 8000
+        if memory_problems:
+            return i - 8000
+        else:
+            return i - 1000
 
 
 def tree_grow(column: pd.DataFrame, nDistinctMin=2):
@@ -184,7 +195,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                 break
         current_node.children = child_list
         if len(root.leaves) > limit:
-            break
+            return root
     return root
 
 
@@ -294,21 +305,37 @@ def median_vector_can_fit(score_matrix):
 
 
 def process_attribute(dataframe: pd.DataFrame):
+    global ndistinct_manually_set
     attribute = process_data(dataframe)
-    root = tree_grow(attribute)
-    ndistinct = 2
-    fibonacci = fibonacci_generator()
-    tries = 0  # failsafe mechanism
-    while True or tries < 40:
+    if not ndistinct_manually_set:
+        root = tree_grow(attribute)
+        ndistinct = 2
+        fibonacci = fibonacci_generator()
+        tries = 0  # failsafe mechanism
+        while True or tries < 40:
+            leaves = root.leaves
+            logger.debug(f"LENGTH OF LEAVES IS {len(leaves)}")
+            if len(leaves) < calculate_machine_limit():
+                break
+            else:
+                # if the file is large then going to the next fibonacci won't do much.
+                # But going five steps further has bigger effect
+                if large_file:
+                    ndistinct = next(fibonacci)
+                    ndistinct = next(fibonacci)
+                    ndistinct = next(fibonacci)
+                    ndistinct = next(fibonacci)
+                ndistinct = next(fibonacci)
+                logger.debug(f"Didn't manage to fit a tree with ndistinct={ndistinct}. Building another one")
+                root = tree_grow(attribute, nDistinctMin=ndistinct)
+                tries += 1
+
+    else:
+        logger.debug("Reminder that ndistinct is " + str(ndistinct_manual_setting))
+        root = tree_grow(attribute, nDistinctMin=ndistinct_manual_setting)
         leaves = root.leaves
-        logger.debug(f"LENGTH OF LEAVES IS {len(leaves)}")
-        if len(leaves) < calculate_machine_limit():
-            break
-        else:
-            ndistinct = next(fibonacci)
-            logger.debug("Didn't manage to fit a tree. Building another one")
-            root = tree_grow(attribute, nDistinctMin=ndistinct)
-            tries += 1
+        logger.debug(f"Length of leaves is {len(leaves)}")
+
     score_matrix = score_function(leaves)
     try:
         medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
@@ -330,7 +357,7 @@ def process_attribute(dataframe: pd.DataFrame):
             score_matrix = score_function(leaves)
             tries += 1
         medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
-    logger.debug("N distinct value is " + str(ndistinct))
+
     logger.debug(attribute)
     output_dictionary = {}
     outlying_elements = {}
@@ -637,6 +664,8 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
                                                                                    threshold_level])
     lexicon[column_name]['patterns'] = convert_to_percentage(lexicon[column_name]['patterns'],
                                                              total_number_of_elements_in_database)
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    logger.debug(f'The current time is: {current_time}')
     logger.debug("Finished " + column_name)
     return lexicon
 
@@ -649,9 +678,29 @@ def process_column(column_name, single_column):
         return {}, column_name
 
 
-def process(file):
+def reset_global_values():
+    global ndistinct_manually_set
+    global memory_problems
+    global ndistinct_manual_setting
+    global large_file
+
+    memory_problems = False
+    ndistinct_manually_set = False
+    ndistinct_manual_setting = 0
+    large_file = False
+
+
+def set_global_variables(manual_override_ndistinct):
+    global ndistinct_manually_set
+    global ndistinct_manual_setting
+    ndistinct_manually_set = True
+    ndistinct_manual_setting = manual_override_ndistinct
+    return None
+
+
+def process(file, manual_override_ndistinct=None, first_time=True, column_name=None):
     try:
-        dataframe = read_data("resources/data_repository/" + file.filename)
+        dataframe = read_data("resources/data_repository/" + file.filename, column_name)
     except AttributeError:
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalClean.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/hospitalDirty.csv")
@@ -665,18 +714,39 @@ def process(file):
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/banklist.csv")
         # dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/Testing123.csv")
 
-    with joblib.parallel_backend("loky"):
-        try:
-            results = Parallel(n_jobs=-1)(
-                delayed(process_column)(column, dataframe[column]) for column in dataframe.columns
-            )
-        except:
-            output = {}
-            for column in dataframe.columns:
-                single_column = dataframe[column]
-                output.update(process_column(column, single_column)[0])
-            return output
+    if dataframe.shape[0] > 500000 and first_time:  # if dataframe too large
+        logger.debug("Large file detected")
+        return list(dataframe.columns)
+    if dataframe.shape[0] < 500000:
+        with joblib.parallel_backend("loky"):
+            try:
+                if manual_override_ndistinct is not None:
+                    set_global_variables(manual_override_ndistinct)
+                    output = {}
+                    for column in dataframe.columns:
+                        single_column = dataframe[column]
+                        output.update(process_column(column, single_column)[0])
+                    return output
+                else:
+                    results = Parallel(n_jobs=-1)(
+                        delayed(process_column)(column, dataframe[column]) for column in dataframe.columns
+                    )
+            except:
+                output = {}
+                for column in dataframe.columns:
+                    single_column = dataframe[column]
+                    output.update(process_column(column, single_column)[0])
+                return output
+    else:
+        global large_file
+        large_file = True
 
+        output = {}
+        for column in dataframe.columns:
+            single_column = dataframe[column]
+            output.update(process_column(column, single_column)[0])
+        reset_global_values()
+        return output
     output = {}
     error_columns = []
 
@@ -689,5 +759,11 @@ def process(file):
     for column in error_columns:
         logger.debug("Computing the columns that errored")
         single_column = dataframe[column]
-        output.update(add_outlying_elements_to_attribute(column, single_column))
+        try:
+            output.update(add_outlying_elements_to_attribute(column, single_column))
+        except:
+            global memory_problems
+            memory_problems = True
+            output.update(add_outlying_elements_to_attribute(column, single_column))
+    reset_global_values()
     return output

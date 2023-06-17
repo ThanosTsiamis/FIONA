@@ -7,6 +7,7 @@ import Head from "next/head";
 function FileUploadForm() {
     const {filename, setFilename} = useContext(UploadContext);
     const fileInput = useRef<HTMLInputElement>(null);
+    const numberInput = useRef<HTMLInputElement>(null);
     const router = useRouter();
     const [csvData, setCsvData] = useState<Array<Array<string>>>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -52,6 +53,10 @@ function FileUploadForm() {
             formData.append('enableParallel', 'False')
         }
 
+        // Add the number value to the form data
+        const number = numberInput.current?.value;
+        formData.append('number', number || '');
+
         try {
             setIsLoading(true);
             const res = await fetch('http://localhost:5000/api/upload', {
@@ -86,8 +91,14 @@ function FileUploadForm() {
             </p>
             <div className="flex flex-col items-center justify-center">
                 <form onSubmit={handleSubmit}>
+                    {/* File input */}
                     <div className="mb-4">
                         <input type="file" ref={fileInput} onChange={handleFileChange}/>
+                    </div>
+                    {/* Number input */}
+                    <div className="mb-4">
+                        Optionally specify the ndistinct number. Otherwise leave empty:
+                        <input type="number" ref={numberInput} placeholder="Enter a number"/>
                     </div>
                     <button type="submit"
                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
