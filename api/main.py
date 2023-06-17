@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import shutil
@@ -73,10 +74,15 @@ def fetch(filename):
     else:
         filepath = "resources/json_dumps/" + filename + ".json"
 
+    CHUNK_SIZE = io.DEFAULT_BUFFER_SIZE
+
     def generate_json():
-        with open(filepath) as f:
-            for line in f:
-                yield line.strip()
+        with open(filepath, 'rb') as f:
+            while True:
+                chunk = f.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                yield chunk.strip()
 
     response = Response(generate_json(), content_type='application/json')
     response.headers.add('Access-Control-Allow-Origin', '*')
