@@ -128,7 +128,16 @@ const HistoryPage = () => {
                         </select>
                     )}
                     {isLoadingAttributes && (
-                        <progress value={loadingProgress} max={100}></progress> // Render the loading bar with progress percentage
+                        <div className="relative">
+                            <progress
+                                value={loadingProgress}
+                                max={100}
+                                className="w-full h-2 bg-blue-200"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center text-white font-bold">
+                                {loadingProgress.toFixed(0)}%
+                            </div>
+                        </div>
                     )}
 
                     <h2 style={{fontSize: '60px', marginTop: '20px', marginBottom: '20px'}}>Outliers</h2>
