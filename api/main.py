@@ -28,7 +28,7 @@ def upload_file():
             columns = outlying_elements
             for column in columns:
                 outlying_elements = process(f, ndistinct_manual_set, first_time=False, column_name=column)
-                json_serialised = json.dumps(outlying_elements)
+                json_serialised = json.dumps(outlying_elements, indent=4)  # Specify indentation level
                 basepath = f"resources/json_dumps/multipart_file/{f.filename}/"
                 directory = os.path.dirname(basepath)
                 os.makedirs(directory, exist_ok=True)
@@ -50,7 +50,7 @@ def upload_file():
                                 merged_data.update(json_data)
 
                     subdir_name = os.path.basename(root)
-                    merged_json = json.dumps(merged_data)
+                    merged_json = json.dumps(merged_data, indent=4)  # Specify indentation level
 
                     output_file = os.path.join(output_dir, subdir_name + ".json")
                     with open(output_file, "w") as file:
@@ -59,7 +59,7 @@ def upload_file():
                     # Remove the subdirectory
                     shutil.rmtree(root)
         else:
-            json_serialised = json.dumps(outlying_elements)
+            json_serialised = json.dumps(outlying_elements, indent=4)  # Specify indentation level
             with open("resources/json_dumps/" + f.filename + ".json", "w") as outfile:
                 outfile.write(json_serialised)
         redirection = redirect("http://localhost:3000/results")
@@ -75,6 +75,7 @@ def fetch(filename):
         filepath = "resources/json_dumps/" + filename + ".json"
 
     CHUNK_SIZE = io.DEFAULT_BUFFER_SIZE
+    file_size = os.path.getsize(filepath)
 
     def generate_json():
         with open(filepath, 'rb') as f:

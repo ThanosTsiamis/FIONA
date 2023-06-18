@@ -210,9 +210,9 @@ const HistoryPage = () => {
                             <thead>
                             <tr>
                                 <th>Generic Patterns</th>
-                                <th>Minimum Coverage</th>
+                                <th>Minimum Ensured Coverage</th>
                                 <th>Specific Patterns</th>
-                                <th>Minimum Coverage</th>
+                                <th>Minimum Ensured Coverage</th>
                             </tr>
                             </thead>
                             <tbody>
