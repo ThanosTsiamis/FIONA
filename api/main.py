@@ -57,7 +57,7 @@ def upload_file():
                         file.write(merged_json)
 
                     # Remove the subdirectory
-                    shutil.rmtree(root)
+                    # shutil.rmtree(root)
         else:
             json_serialised = json.dumps(outlying_elements, indent=4)  # Specify indentation level
             with open("resources/json_dumps/" + f.filename + ".json", "w") as outfile:

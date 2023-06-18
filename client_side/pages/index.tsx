@@ -2,7 +2,7 @@ import React, {useContext, useRef, useState} from 'react';
 import {useRouter} from 'next/router';
 import {UploadContext} from '../components/UploadContext';
 import Papa from 'papaparse';
-import Head from "next/head";
+import Head from 'next/head';
 
 function FileUploadForm() {
     const {filename, setFilename} = useContext(UploadContext);
@@ -13,6 +13,7 @@ function FileUploadForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [enableParallel, setEnableParallel] = useState(false);
     const [error, setError] = useState('');
+    const [showAdvancedOptions, setShowAdvancedOptions] = useState(false); // State variable to control visibility
 
     const handleFileChange = () => {
         const file = fileInput.current?.files?.[0];
@@ -23,7 +24,9 @@ function FileUploadForm() {
         const maxFileSizeInMb = 1;
 
         if (fileSizeInMb > maxFileSizeInMb) {
-            setError('File is too large to be previewed on screen and will slow down your computer');
+            setError(
+                'File is too large to be previewed on screen and will slow down your computer'
+            );
             return;
         }
 
@@ -48,9 +51,9 @@ function FileUploadForm() {
         }
         formData.append('file', file);
         if (enableParallel) {
-            formData.append('enableParallel', 'True')
+            formData.append('enableParallel', 'True');
         } else {
-            formData.append('enableParallel', 'False')
+            formData.append('enableParallel', 'False');
         }
 
         // Add the number value to the form data
@@ -77,8 +80,12 @@ function FileUploadForm() {
         }
     };
 
+    const toggleAdvancedOptions = () => {
+        setShowAdvancedOptions((prev) => !prev);
+    };
+
     return (
-        <div className={"flex flex-col h-screen justify-between"}>
+        <div className={'flex flex-col h-screen justify-between'}>
             <Head>
                 <title>FIONA</title>
             </Head>
@@ -87,7 +94,8 @@ function FileUploadForm() {
             </h1>
             <p className="mb-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">
                 Discover hidden insights and unlock the true potential of your data with our cutting-edge categorical
-                outlier detection technology.
+                outlier
+                detection technology.
             </p>
             <div className="flex flex-col items-center justify-center">
                 <form onSubmit={handleSubmit}>
@@ -97,22 +105,35 @@ function FileUploadForm() {
                     </div>
                     {/* Number input */}
                     <div className="mb-4">
-                        Optionally specify the ndistinct number. Otherwise leave empty:
-                        <input type="number" ref={numberInput} placeholder="Enter a number"/>
+                        {/* Show the advanced options input based on the state */}
+                        {showAdvancedOptions && (
+                            <div>
+                                Optionally specify the ndistinct number. Otherwise leave empty:
+                                <input type="number" ref={numberInput} placeholder="Enter a number"/>
+                            </div>
+                        )}
                     </div>
-                    <button type="submit"
-                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
-                            disabled={isLoading}>
+                    <button
+                        type="submit"
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
+                        disabled={isLoading}
+                    >
                         Upload
                     </button>
                 </form>
+                <button onClick={toggleAdvancedOptions}>
+                    {/* Toggle the label based on the state */}
+                    Click here to enable advanced options
+                </button>
                 {isLoading && (
                     <div className="flex items-center justify-center mt-4">
                         <div
                             className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
-                            role="status">
-                            <span
-                                className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">Processing...</span>
+                            role="status"
+                        >
+<span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
+Processing...
+</span>
                         </div>
                     </div>
                 )}
@@ -137,20 +158,23 @@ function FileUploadForm() {
             </table>
             <div className="border border-gray-200 rounded-md p-4 max-w-xs absolute top-8 right-8">
                 <p className="text-lg font-semibold">
-                    <a href="history" className="text-gray-800 no-underline hover:underline">History</a>{" "}
-                    <span role="img" aria-label="book">📖</span>
+                    <a href="history" className="text-gray-800 no-underline hover:underline">
+                        History
+                    </a>{' '}
+                    <span role="img" aria-label="book">
+📖
+</span>
                 </p>
             </div>
-            <footer
-                className="bg-neutral-100 text-center dark:bg-neutral-600 lg:text-left">
+            <footer className="bg-neutral-100 text-center dark:bg-neutral-600 lg:text-left">
                 <div className="container p-6 text-neutral-800 dark:text-neutral-200">
                     <div className="grid gap-4 lg:grid-cols-2">
                         <div className="mb-6 md:mb-0">
                             <h5 className="mb-2 font-medium uppercase">About</h5>
-
                             <p className="mb-4">
                                 Fiona is the result of Thanos Tsiamis' master thesis, developed under the supervision of
-                                Dr. A.A.A. (Hakim) Qahtan for Utrecht University during the academic year 2022-2023.
+                                Dr. A.A.A.
+                                (Hakim) Qahtan for Utrecht University during the academic year 2022-2023.
                             </p>
                         </div>
 
@@ -159,26 +183,27 @@ function FileUploadForm() {
 
                             <ul className="mb-0 list-none">
                                 <li>
-                                    <a href="" className="text-neutral-800 dark:text-neutral-200"
-                                    >Github Repository</a
-                                    >
+                                    <a href="" className="text-neutral-800 dark:text-neutral-200">
+                                        Github Repository
+                                    </a>
                                 </li>
                                 <li>
-                                    <a href="" className="text-neutral-800 dark:text-neutral-200"
-                                    >Master Thesis Paper (coming soon)</a
-                                    >
+                                    <a href="" className="text-neutral-800 dark:text-neutral-200">
+                                        Master Thesis Paper (coming soon)
+                                    </a>
                                 </li>
                                 <li>
-                                    <a href="https://github.com/ThanosTsiamis" className="text-neutral-800 dark:text-neutral-200"
-                                    >Thanos Tsiamis's Github</a
-                                    >
+                                    <a href="https://github.com/ThanosTsiamis"
+                                       className="text-neutral-800 dark:text-neutral-200">
+                                        Thanos Tsiamis's Github
+                                    </a>
                                 </li>
                                 <li>
-                                    <a href="https://github.com/qahtanaa" className="text-neutral-800 dark:text-neutral-200"
-                                    >Dr. A.A.A. (Hakim) Qahtan's Github</a
-                                    >
+                                    <a href="https://github.com/qahtanaa"
+                                       className="text-neutral-800 dark:text-neutral-200">
+                                        Dr. A.A.A. (Hakim) Qahtan's Github
+                                    </a>
                                 </li>
-
                             </ul>
                         </div>
                     </div>
@@ -186,11 +211,9 @@ function FileUploadForm() {
                 <div
                     className="bg-neutral-200 p-4 text-center text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
                     Developed at:
-                    <a
-                        className="text-neutral-800 dark:text-neutral-400"
-                        href="https://www.uu.nl/en/"
-                    >Utrecht University</a
-                    >
+                    <a className="text-neutral-800 dark:text-neutral-400" href="https://www.uu.nl/en/">
+                        Utrecht University
+                    </a>
                 </div>
             </footer>
         </div>
