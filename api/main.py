@@ -4,6 +4,8 @@ import os
 import shutil
 from datetime import datetime
 
+import ijson as ijson
+import ujson as ujson
 from flask import Flask, request, jsonify, redirect, Response
 
 from algorithm import process, logger
@@ -69,24 +71,17 @@ def upload_file():
 
 @app.route("/api/fetch/<string:filename>", methods=['GET'])
 def fetch(filename):
-    if filename.endswith(".json"):
-        filepath = "resources/json_dumps/" + filename
-    else:
-        filepath = "resources/json_dumps/" + filename + ".json"
+    file_path = os.path.join("resources/json_dumps", filename)
 
-    CHUNK_SIZE = io.DEFAULT_BUFFER_SIZE
-    file_size = os.path.getsize(filepath)
+    if not filename.endswith(".json"):
+        file_path += ".json"
 
-    def generate_json():
-        with open(filepath, 'rb') as f:
-            while True:
-                chunk = f.read(CHUNK_SIZE)
-                if not chunk:
-                    break
-                yield chunk.strip()
+    with open(file_path) as f:
+        data = ujson.load(f)
 
-    response = Response(generate_json(), content_type='application/json')
+    response = Response(ujson.dumps(data), content_type='application/json')
     response.headers.add('Access-Control-Allow-Origin', '*')
+    logger.debug("Response sent")
     return response
 
 

@@ -3,7 +3,6 @@ import React, {useEffect, useState} from 'react';
 type HistoryData = {
     [key: string]: string[];
 };
-
 type Data = {
     [key: string]: {
         [key: string]: {
@@ -20,17 +19,12 @@ const HistoryPage = () => {
     const [resultsData, setResultsData] = useState<Data>({});
     const [headers, setHeaders] = useState<string[]>([]);
     const [selectedKey, setSelectedKey] = useState<string>('');
-    const [isLoadingFiles, setIsLoadingFiles] = useState<boolean>(false);
-    const [isLoadingAttributes, setIsLoadingAttributes] = useState<boolean>(false);
-    const [loadingProgress, setLoadingProgress] = useState<number>(0);
 
     useEffect(() => {
         const fetchHistoryData = async () => {
-            setIsLoadingFiles(true);
             const response = await fetch('http://localhost:5000/api/history');
             const jsonData = await response.json();
             setHistoryData(jsonData);
-            setIsLoadingFiles(false);
         };
 
         fetchHistoryData();
@@ -38,40 +32,11 @@ const HistoryPage = () => {
 
     useEffect(() => {
         const fetchResultsData = async () => {
-            setIsLoadingAttributes(true);
-            setLoadingProgress(0);
             const response = await fetch(`http://localhost:5000/api/fetch/${selectedFile}`);
-            const totalBytes = response.headers.get('content-length');
-            const reader = response.body!.getReader();
-            let receivedBytes = 0;
-            let chunks: Uint8Array[] = [];
-
-            while (true) {
-                const {done, value} = await reader.read();
-                if (done) break;
-
-                chunks.push(value);
-                receivedBytes += value.length;
-
-                if (totalBytes) {
-                    const progress = (receivedBytes / Number(totalBytes)) * 100;
-                    setLoadingProgress(progress);
-                }
-            }
-
-            const concatenatedChunks = new Uint8Array(receivedBytes);
-            let offset = 0;
-            for (const chunk of chunks) {
-                concatenatedChunks.set(chunk, offset);
-                offset += chunk.length;
-            }
-
-            const decoder = new TextDecoder();
-            const jsonData = JSON.parse(decoder.decode(concatenatedChunks));
+            const jsonData = await response.json();
             setResultsData(jsonData);
             setHeaders(Object.keys(jsonData));
             setSelectedKey(Object.keys(jsonData)[0]); // Select first outer key by default
-            setIsLoadingAttributes(false);
         };
 
         if (selectedFile) {
@@ -97,49 +62,27 @@ const HistoryPage = () => {
           </span>
                 </p>
             </div>
-            <div>
-                <b>Select the JSON file:</b>
-                {isLoadingFiles ? (
-                    <div>Loading files...</div> // Render a loading indicator for file loading
-                ) : (
-                    <select value={selectedFile} onChange={(e) => setSelectedFile(e.target.value)}>
-                        <option value="">-- Select a file --</option>
-                        {Object.keys(historyData).map((key) => (
-                            <option key={key} value={historyData[key]}>
-                                {historyData[key]}
-                            </option>
-                        ))}
-                    </select>
-                )}
-            </div>
+
+            <b>Select the JSON file:</b>
+            <select value={selectedFile} onChange={(e) => setSelectedFile(e.target.value)}>
+                <option value="">-- Select a file --</option>
+                {Object.keys(historyData).map((key) => (
+                    <option key={key} value={historyData[key]}>
+                        {historyData[key]}
+                    </option>
+                ))}
+            </select>
 
             {selectedFile && (
                 <div>
-                    <b>Select from the dropdown the Appropriate Attribute:</b>
-                    {isLoadingAttributes ? (
-                        <div>Loading attributes...</div> // Render a loading indicator for attribute loading
-                    ) : (
-                        <select value={selectedKey} onChange={(e) => setSelectedKey(e.target.value)}>
-                            {headers.map((outerKey) => (
-                                <option key={outerKey} value={outerKey}>
-                                    {outerKey}
-                                </option>
-                            ))}
-                        </select>
-                    )}
-                    {isLoadingAttributes && (
-                        <div className="relative">
-                            <progress
-                                value={loadingProgress}
-                                max={100}
-                                className="w-full h-2 bg-blue-200"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center text-white font-bold">
-                                {loadingProgress.toFixed(0)}%
-                            </div>
-                        </div>
-                    )}
-
+                    <b>Select from the dropdown the Appropriate Attribute</b>
+                    <select value={selectedKey} onChange={(e) => setSelectedKey(e.target.value)}>
+                        {headers.map((outerKey) => (
+                            <option key={outerKey} value={outerKey}>
+                                {outerKey}
+                            </option>
+                        ))}
+                    </select>
                     <h2 style={{fontSize: '60px', marginTop: '20px', marginBottom: '20px'}}>Outliers</h2>
                     {Object.keys(resultsData).length > 0 && (
                         <table>
@@ -210,9 +153,9 @@ const HistoryPage = () => {
                             <thead>
                             <tr>
                                 <th>Generic Patterns</th>
-                                <th>Minimum Ensured Coverage</th>
+                                <th>Minimum Coverage</th>
                                 <th>Specific Patterns</th>
-                                <th>Minimum Ensured Coverage</th>
+                                <th>Minimum Coverage</th>
                             </tr>
                             </thead>
                             <tbody>
