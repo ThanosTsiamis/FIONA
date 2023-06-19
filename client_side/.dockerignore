@@ -1,0 +1,22 @@
+# Ignore development and build files
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.env
+.env.*
+
+# Ignore editor and IDE specific files
+.idea/
+.vscode/
+
+# Ignore build artifacts and output folders
+build/
+dist/
+
+# Ignore log files and temporary files
+logs/
+*.log
+
+
+.git/

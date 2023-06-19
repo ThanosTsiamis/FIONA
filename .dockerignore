@@ -1,0 +1,13 @@
+# Ignore editor and IDE specific files
+.idea/
+.vscode/
+
+# Ignore build artifacts and output folders
+build/
+dist/
+
+# Ignore log files and temporary files
+logs/
+*.log
+
+.git/
