@@ -10,6 +10,13 @@ from algorithm import process, logger
 app = Flask("FIONA")
 
 
+@app.errorhandler(500)
+def internal_server_error():
+    redirection = redirect("http://localhost:3000/error")
+    redirection.headers.add('Access-Control-Allow-Origin', '*')
+    return redirection
+
+
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     if request.method == 'POST':
