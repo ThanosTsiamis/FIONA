@@ -8,7 +8,7 @@ FIONA aims to find erroneous values
 in a dataset.
 
 ## How to run
-There are 2 ways to run the project: (i) Locally and (ii) in Docker.
+There are 2 ways to run the project: (i) [Locally](#local-execution) and (ii) in [Docker](#docker).
 
 **We strongly advise towards the second way (Docker) due to its simplicity.**
 
