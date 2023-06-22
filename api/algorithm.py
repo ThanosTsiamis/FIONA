@@ -225,6 +225,12 @@ def node_distance(node1: Node, node2: Node, penalty: int):
 
 
 def score_sensitive_function(leaves):
+    """
+    There are cases where a small dataset produces numerical instability problems and forces a overflow or an underflow.
+    DoubleDouble is thus used to solve this issue.
+    :param leaves:
+    :return:
+    """
     max_depth = max([leaf.depth for leaf in leaves])
 
     scoring_matrix = np.empty([len(leaves), len(leaves)], dtype=object)
@@ -288,6 +294,10 @@ def score_function(leaves: tuple):
 
 
 def fibonacci_generator():
+    """
+    A fibonacci generator in order to automatically increase the hyperparameter ndistinctMin,
+    :return: It yields the next fibonacci. It does not return it.
+    """
     a, b = 2, 3
     while True:
         yield a
@@ -295,6 +305,11 @@ def fibonacci_generator():
 
 
 def median_vector_can_fit(score_matrix):
+    """
+    Memory check helper function. Checks if the median vector can fit in memory by forcing a memory overflow.
+    :param score_matrix: The score matrix created by the algorithm.
+    :return: Boolean flag that indicates whether the median can fit in main memory.
+    """
     try:
         medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
         gc.collect()
@@ -398,6 +413,12 @@ def process_attribute(dataframe: pd.DataFrame):
 
 
 def compare_dicts(dict1, dict2):
+    """
+    Helper function. Check if two dicts are the same or not.
+    :param dict1: A dictionary
+    :param dict2: Another dictionary
+    :return: Boolean expression
+    """
     # Check if both dictionaries have the same keys
     if set(dict1.keys()) != set(dict2.keys()):
         return False
@@ -419,6 +440,13 @@ def compare_dicts(dict1, dict2):
 
 
 def replace_repeated_chars(string):
+    """
+    Create the regexed expression for a given generalised string, where the consecutively repeated characters
+     are turned into +
+    For example, string UUUUddsU turns into U+d+sU.
+    :param string: A generalised string
+    :return: A regexed string
+    """
     if len(string) < 2:
         return string
 
@@ -437,6 +465,12 @@ def replace_repeated_chars(string):
 
 
 def find_difference_index(str1, str2):
+    """
+    Helper function that finds which index two strings differ
+    :param str1: A string
+    :param str2: Another string
+    :return: The index that two strings differ. Return -1 if they don't
+    """
     str1 = str(str1)
     str2 = str(str2)
 
@@ -453,6 +487,12 @@ def find_difference_index(str1, str2):
 
 
 def merge_dictionaries(dict1, dict2):
+    """
+    Takes two dictionaries and merges them. Helper function
+    :param dict1: a dictionary
+    :param dict2: another dictionary
+    :return: Merged dict that contains both dict1 and dict2
+    """
     merged_dict = {}
 
     # Merge dictionaries from dict1
@@ -480,6 +520,14 @@ def merge_dictionaries(dict1, dict2):
 
 
 def convert_to_percentage(data, number):
+    """
+    Recursive function which takes the deep dictionary that the algorithm has detected and turns the occurences (which
+    are the innermost values) to percentages, so it can be used in the front end.
+    :param data: the dictionary
+    :param number: the length of the attribute
+    :return: the same dictionary but instead of occurences for each keys, they are percentages relative to the
+            attribute's length
+    """
     if isinstance(data, dict):
         new_dict = {}
         for key, value in data.items():

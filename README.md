@@ -5,10 +5,10 @@ at Utrecht University for the program of Computing Science. It was developed und
 the supervision of Dr. A.A.A. (Hakim) Qahtan for the academic year of 2022 - 2023.
 
 FIONA aims to find erroneous values
-in a dataset.
+in a dataset. More information about FIONA in its accompanying paper.
 
 ## How to run
-There are 2 ways to run the project: (i) Locally and (ii) in Docker.
+There are 2 ways to run the project: (i) [Locally](#local-execution) and (ii) in [Docker](#docker).
 
 **We strongly advise towards the second way (Docker) due to its simplicity.**
 
@@ -17,7 +17,7 @@ There are 2 ways to run the project: (i) Locally and (ii) in Docker.
 
 For the **front end**:
 
-One liner in terminal: `cd .\client_side\ & npm install & npm run dev`
+One-liner in terminal: `cd .\client_side\ & npm install & npm run dev`
 
 Explanation:
 
@@ -27,7 +27,7 @@ Explanation:
 
 For the **back end**:
 
-One liner in terminal `cd api & pip install -r requirements.txt & python main.py`
+One-liner in terminal `cd api & pip install -r requirements.txt & python main.py`
 
 Explanation:
 - Open a second terminal and cd to the api folder

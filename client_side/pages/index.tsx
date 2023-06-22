@@ -121,6 +121,7 @@ function FileUploadForm() {
                         Upload
                     </button>
                 </form>
+                {error && <p className="text-red-500">{error}</p>} {/* Display error message */}
                 <button onClick={toggleAdvancedOptions}>
                     {/* Toggle the label based on the state */}
                     Click here to enable advanced options
