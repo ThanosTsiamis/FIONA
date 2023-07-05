@@ -16,6 +16,8 @@ memory_problems = False
 ndistinct_manually_set = False
 ndistinct_manual_setting = 2
 large_file = False
+long_column_limit = 36  # This is based on the length of a UUID
+large_file_threshold = 500000
 
 
 def read_data(filename, column_name=None):
@@ -35,6 +37,7 @@ def read_data(filename, column_name=None):
     elif file_extension == "tsv":
         return pd.read_csv(filename, sep='\t', dtype=str)
     else:
+        # TODO: Add database support here in the future
         raise ValueError("Unsupported file format. Only CSV, XLSX, and JSON formats are supported.")
 
 
@@ -77,7 +80,7 @@ def find_unique_elements(generalised_string):
 
 def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
     """
-    This function determines the kind of split that will be applied on the data base at hand. This is mostly dependent
+    This function determines the kind of split that will be applied on the dataset at hand. The split dependent
     on the specificity_level (i.e. the depth of the tree).
     :param specificity_level: Specificity level corresponds to the depth of the tree. Based on the depth of the tree
     different kind of splits are done.
@@ -105,7 +108,7 @@ def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
         return set(word_split(df[:, 0]))
 
 
-def calculate_machine_limit(low_on_memory=False):
+def calculate_machine_limit():
     """
     Find the maximum size of an empty NumPy matrix that can be created without causing a memory overflow.
     :return: the maximum size of the matrix.
@@ -135,7 +138,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     """
     root = Node(" ", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
-    long_column_limit = 36  # This is based on the length of a UUID
+    global long_column_limit
     limit = calculate_machine_limit()
     while node_list:
         current_node = node_list.pop(0)
@@ -226,7 +229,7 @@ def node_distance(node1: Node, node2: Node, penalty: int):
 
 def score_sensitive_function(leaves):
     """
-    There are cases where a small dataset produces numerical instability problems and forces a overflow or an underflow.
+    There are cases where a small dataset produces numerical instability problems and forces an overflow or an underflow.
     DoubleDouble is thus used to solve this issue.
     :param leaves:
     :return:
@@ -521,11 +524,11 @@ def merge_dictionaries(dict1, dict2):
 
 def convert_to_percentage(data, number):
     """
-    Recursive function which takes the deep dictionary that the algorithm has detected and turns the occurences (which
+    Recursive function which takes the deep dictionary that the algorithm has detected and turns the occurrences (which
     are the innermost values) to percentages, so it can be used in the front end.
     :param data: the dictionary
     :param number: the length of the attribute
-    :return: the same dictionary but instead of occurences for each keys, they are percentages relative to the
+    :return: the same dictionary but instead of occurrences for each key, they are percentages relative to the
             attribute's length
     """
     if isinstance(data, dict):
@@ -662,12 +665,9 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
             pattern_set = set()
             for pattern_rep in col_outliers_and_patterns['patterns'][threshold_level].keys():
                 first_patterns_element = list(col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])[0]
-                # index_they_differ = find_difference_index(pattern_rep, first_patterns_element)
-                # transformed_string = str(pattern_rep)[:index_they_differ] + replace_repeated_chars(
-                #     str(pattern_rep)[index_they_differ:])
+
                 transformed_string = generalise_string(first_patterns_element)
-                # lexicon[column]['patterns'][threshold_level][transformed_string] = {}
-                # lexicon[column]['patterns'][threshold_level][transformed_string][pattern_rep] = {}
+
                 if not apply_generalised_comparison:
                     transformed_string = replace_repeated_chars(transformed_string)
 
@@ -682,9 +682,7 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
             for outlier_representative in col_outliers_and_patterns['outliers'][threshold_level]:
                 first_outliers_element = \
                     list(col_outliers_and_patterns['outliers'][threshold_level][outlier_representative])[0]
-                # index_they_differ = find_difference_index(outlier_representative, first_outliers_element)
-                # transformed_string = str(outlier_representative)[:index_they_differ] + replace_repeated_chars(
-                #     str(outlier_representative)[index_they_differ:])
+
                 transformed_string = generalise_string(first_outliers_element)
                 if not apply_generalised_comparison:
                     transformed_string = replace_repeated_chars(transformed_string)
@@ -731,11 +729,15 @@ def reset_global_values():
     global memory_problems
     global ndistinct_manual_setting
     global large_file
+    global long_column_limit
+    global large_file_threshold
 
     memory_problems = False
     ndistinct_manually_set = False
     ndistinct_manual_setting = 0
     large_file = False
+    long_column_limit = 36
+    large_file_threshold = 500000
 
 
 def set_global_variables(manual_override_ndistinct):
@@ -746,26 +748,23 @@ def set_global_variables(manual_override_ndistinct):
     return None
 
 
-def process(file, manual_override_ndistinct=None, first_time=True, column_name=None):
+def process(file, manual_override_ndistinct=None, first_time=True, column_name=None, manual_override_long_column=None,
+            manual_override_large_file_threshold=None):
+    global large_file_threshold
+    if manual_override_large_file_threshold is not None:
+        large_file_threshold = manual_override_large_file_threshold
+    global long_column_limit
+    if manual_override_long_column is not None:
+        long_column_limit = manual_override_long_column
     try:
         dataframe = read_data("resources/data_repository/" + file.filename, column_name)
     except AttributeError:
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/HospitalClean.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/hospital/hospitalDirty.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/tax/taxClean.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/Mass1.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/flightsDirty.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/beers/beersClean.csv")
         dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/Lottery_Powerball_Winning_Numbers__Beginning_2010.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/movies_1/moviesDirty.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/banklist.csv")
-        # dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/Testing123.csv")
 
-    if dataframe.shape[0] > 500000 and first_time:  # if dataframe too large
+    if dataframe.shape[0] > large_file_threshold and first_time:  # if dataframe too large
         logger.debug("Large file detected")
         return list(dataframe.columns)
-    if dataframe.shape[0] < 500000:
+    if dataframe.shape[0] < large_file_threshold:
         with joblib.parallel_backend("loky"):
             try:
                 if manual_override_ndistinct is not None:
