@@ -8,6 +8,8 @@ function FileUploadForm() {
     const {filename, setFilename} = useContext(UploadContext);
     const fileInput = useRef<HTMLInputElement>(null);
     const numberInput = useRef<HTMLInputElement>(null);
+    const longColumnCutoffInput = useRef<HTMLInputElement>(null)
+    const largeFileThreshold = useRef<HTMLInputElement>(null)
     const router = useRouter();
     const [csvData, setCsvData] = useState<Array<Array<string>>>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -38,10 +40,6 @@ function FileUploadForm() {
         });
     };
 
-    const handleParallelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setEnableParallel(e.target.checked);
-    };
-
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData();
@@ -50,15 +48,17 @@ function FileUploadForm() {
             return;
         }
         formData.append('file', file);
-        if (enableParallel) {
-            formData.append('enableParallel', 'True');
-        } else {
-            formData.append('enableParallel', 'False');
-        }
 
         // Add the number value to the form data
         const number = numberInput.current?.value;
         formData.append('number', number || '');
+
+        const long_column_cutoff = longColumnCutoffInput.current?.value
+        formData.append('long_column_cutoff', long_column_cutoff || '')
+
+        const largeFile_threshold_input = largeFileThreshold.current?.value
+        formData.append('largeFile_threshold_input', largeFile_threshold_input || '')
+
 
         try {
             setIsLoading(true);
@@ -108,8 +108,18 @@ function FileUploadForm() {
                         {/* Show the advanced options input based on the state */}
                         {showAdvancedOptions && (
                             <div>
-                                Optionally specify the ndistinct number. Otherwise leave empty:
-                                <input type="number" ref={numberInput} placeholder="Enter a number"/>
+                                <div style={{display: "flex", alignItems: "center"}}>
+                                    <span style={{marginRight: "10px"}}>Specify the ndistinct number:</span>
+                                    <input type="number" ref={numberInput} placeholder="Enter a number"/>
+                                </div>
+                                <div style={{display: "flex", alignItems: "center"}}>
+                                    <span style={{marginRight: "10px"}}>Specify the long column cutoff number:</span>
+                                    <input type="number" ref={longColumnCutoffInput} placeholder="Enter a number"/>
+                                </div>
+                                <div style={{display: "flex", alignItems: "center"}}>
+                                    <span style={{marginRight: "10px"}}>Specify above how many lines constitutes a large file:</span>
+                                    <input type="number" ref={largeFileThreshold} placeholder="Enter a number"/>
+                                </div>
                             </div>
                         )}
                     </div>
