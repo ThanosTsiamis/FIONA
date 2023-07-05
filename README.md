@@ -1,5 +1,7 @@
 # FIONA: FInding Outliers iN Attributes
 
+<img src="client_side/public/LogoFIONA.png" alt="A minimalistic one-line of a woman fused into a tree" width="200" title="Logo of FIONA"/>
+
 FIONA is the Master's Thesis of Thanos Tsiamis
 at Utrecht University for the program of Computing Science. It was developed under
 the supervision of Dr. A.A.A. (Hakim) Qahtan for the academic year of 2022 - 2023.
