@@ -787,7 +787,9 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
     else:
         global large_file
         large_file = True
-
+        if manual_override_ndistinct is not None:
+            set_global_variables(manual_override_ndistinct)
+            logger.debug(f"Reminder that ndistinctMin is {manual_override_ndistinct}")
         output = {}
         for column in dataframe.columns:
             single_column = dataframe[column]
