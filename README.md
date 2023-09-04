@@ -2,12 +2,11 @@
 
 <img src="client_side/public/LogoFIONA.png" alt="A minimalistic one-line of a woman fused into a tree" width="200" title="Logo of FIONA"/>
 
+FIONA, short for "Finding Outliers in Attributes," is an innovative framework designed for the detection of categorical outliers within datasets. This configuration-free and user-friendly tool specializes in identifying unusual patterns in data attributes, making it invaluable for data analysis and decision-making processes. FIONA's key strengths lie in its ability to capture syntactic structures, its deterministic nature, and its adaptability to various encodings and languages, making it a powerful and accessible tool for outlier detection in diverse datasets.
+
 FIONA is the Master's Thesis of Thanos Tsiamis
 at Utrecht University for the program of Computing Science. It was developed under
 the supervision of Dr. A.A.A. (Hakim) Qahtan for the academic year of 2022 - 2023.
-
-FIONA aims to find erroneous values
-in a dataset. More information about FIONA in its accompanying paper.
 
 ## How to run
 There are 2 ways to run the project: (i) [Locally](#local-execution) and (ii) in [Docker](#docker).
