@@ -10,4 +10,12 @@ dist/
 logs/
 *.log
 
+# Ignore Demo files and videos
+demonstration_video/
+*.mp4
+
+# Ignore git files
 .git/
+
+# Ignore github files
+.github/
