@@ -36,12 +36,17 @@ Explanation:
 - Run the command `python main.py`
 
 ### Docker
-**Important Note**: A docker installation is required for it to work. More info on how to
+**_Important Note_**: A docker installation is required for it to work. More info on how to
 install it [here](https://docs.docker.com/get-docker/).
 
+- Once Docker is installed, navigate to the directory where you have the FIONA project files.
 
-Run the command:
-`docker compose up`
+- Open a terminal or command prompt.
+
+- Run the following command to start the Docker containers: `docker compose up`
+
+Please make sure that approximately 2GB of storage are available for the 2 docker containers.
+
 
 
 ## How to use
