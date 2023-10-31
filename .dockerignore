@@ -9,5 +9,16 @@ dist/
 # Ignore log files and temporary files
 logs/
 *.log
+*.log
 
+
+# Ignore Demo files and videos
+demonstration_video/
+*.mp4
+
+# Ignore git files
 .git/
+.git/
+
+# Ignore github files
+.github/
