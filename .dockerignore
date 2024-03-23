@@ -9,7 +9,6 @@ dist/
 # Ignore log files and temporary files
 logs/
 *.log
-*.log
 
 
 # Ignore Demo files and videos
