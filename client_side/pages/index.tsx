@@ -2,7 +2,6 @@ import React, {useContext, useRef, useState} from 'react';
 import {useRouter} from 'next/router';
 import {UploadContext} from '../components/UploadContext';
 import Papa from 'papaparse';
-import Head from 'next/head';
 
 function FileUploadForm() {
     const {filename, setFilename} = useContext(UploadContext);
@@ -183,7 +182,7 @@ Processing...
                         <div className="mb-6 md:mb-0">
                             <h5 className="mb-2 font-medium uppercase">About</h5>
                             <p className="mb-4">
-                                Fiona is the result of Thanos Tsiamis' master thesis, developed under the supervision of
+                                Fiona is the result of Thanos Tsiamis&apos; master thesis, developed under the supervision of
                                 Dr. A.A.A.
                                 (Hakim) Qahtan for Utrecht University during the academic year 2022-2023.
                             </p>
@@ -206,13 +205,13 @@ Processing...
                                 <li>
                                     <a href="https://github.com/ThanosTsiamis"
                                        className="text-neutral-800 dark:text-neutral-200">
-                                        Thanos Tsiamis's Github
+                                        Thanos Tsiamis&apos;s Github
                                     </a>
                                 </li>
                                 <li>
                                     <a href="https://github.com/qahtanaa"
                                        className="text-neutral-800 dark:text-neutral-200">
-                                        Dr. A.A.A. (Hakim) Qahtan's Github
+                                        Dr. A.A.A. (Hakim) Qahtan&apos;s Github
                                     </a>
                                 </li>
                             </ul>

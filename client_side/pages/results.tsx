@@ -62,7 +62,7 @@ const ResultsPage = () => {
                 <table>
                     <thead>
                     <tr>
-                        <th>System's Decision Making Confidence (%)</th>
+                        <th>System&apos;s Decision Making Confidence (%)</th>
                         <th>Generic Strings</th>
                         <th>Occurrences</th>
                     </tr>
