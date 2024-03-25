@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react';
+import {Tab, Tabs} from "@mui/material";
 
 type HistoryData = {
     [key: string]: string[];
@@ -75,14 +76,17 @@ const HistoryPage = () => {
 
             {selectedFile && (
                 <div>
-                    <b>Select from the dropdown the Appropriate Attribute</b>
-                    <select value={selectedKey} onChange={(e) => setSelectedKey(e.target.value)}>
+                    <Tabs
+                        value={selectedKey}
+                        onChange={(e, newValue) => setSelectedKey(newValue)}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        aria-label="tabs"
+                    >
                         {headers.map((outerKey) => (
-                            <option key={outerKey} value={outerKey}>
-                                {outerKey}
-                            </option>
+                            <Tab key={outerKey} value={outerKey} label={outerKey}/>
                         ))}
-                    </select>
+                    </Tabs>
                     <h2 style={{fontSize: '60px', marginTop: '20px', marginBottom: '20px'}}>Outliers</h2>
                     {Object.keys(resultsData).length > 0 && (
                         <table>
