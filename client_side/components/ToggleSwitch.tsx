@@ -4,6 +4,10 @@ import Switch from "@mui/material/Switch";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 
+interface ToggleSwitchProps {
+    onChange: (checked: boolean) => void; // Define onChange prop
+}
+
 const FancySwitch = styled(Switch)(({theme}: { theme: Theme }) => ({
     width: 42,
     height: 26,
@@ -48,14 +52,16 @@ const FancySwitch = styled(Switch)(({theme}: { theme: Theme }) => ({
     },
 }));
 
-export const ToggleSwitch = () => {
+const ToggleSwitch: React.FC<ToggleSwitchProps> = ({onChange}) => { // Use ToggleSwitchProps
     const [collapsed, setCollapsed] = useState(false);
 
     const toggleCollapsed = useCallback(() => {
         setCollapsed((previouslyCollapsed) => {
-            return !previouslyCollapsed;
+            const newCollapsed = !previouslyCollapsed;
+            onChange(newCollapsed); // Call onChange prop when the switch is toggled
+            return newCollapsed;
         });
-    }, []);
+    }, [onChange]);
 
     return (
         <Stack direction="row" component="label" alignItems="center" justifyContent="center">

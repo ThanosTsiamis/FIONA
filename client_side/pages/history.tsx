@@ -25,6 +25,7 @@ const HistoryPage = () => {
     const [resultsData, setResultsData] = useState<Data>({});
     const [headers, setHeaders] = useState<string[]>([]);
     const [selectedKey, setSelectedKey] = useState<string>('');
+    const [detailedView, setDetailedView] = useState<boolean>(false); // New state for detailed view
 
     useEffect(() => {
         const fetchHistoryData = async () => {
@@ -76,9 +77,17 @@ const HistoryPage = () => {
                             <Tab key={outerKey} value={outerKey} label={outerKey}/>
                         ))}
                     </Tabs>
-                    <ToggleSwitch/>
-                    <OutliersTable resultsData={resultsData} selectedKey={selectedKey}/>
-                    <PatternsTable resultsData={resultsData} selectedKey={selectedKey}/>
+                    <ToggleSwitch
+                        onChange={(checked: boolean) => setDetailedView(checked)}/> {/* Pass onChange handler */}
+                    {/* Conditionally render tables based on detailedView state */}
+                    {detailedView ? (
+                        <>
+                            <OutliersTable resultsData={resultsData} selectedKey={selectedKey}/>
+                            <PatternsTable resultsData={resultsData} selectedKey={selectedKey}/>
+                        </>
+                    ) : (
+                        <div>Brief Section</div>
+                    )}
                 </div>
             )}
         </div>
