@@ -14,7 +14,7 @@ export default function Ouch500() {
         </div>
         <Link href="/">
             <a>
-                Why don't you check the <u>homepage</u>?
+                Why don&apos;t you check the <u>homepage</u>?
             </a>
         </Link>
     </>
