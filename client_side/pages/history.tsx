@@ -1,10 +1,14 @@
 import React, {useEffect, useState} from 'react';
 import {Tab, Tabs} from "@mui/material";
 import HomeButton from "../components/HomeButton";
+import PatternsTable from "../components/PatternsTable";
+import OutliersTable from "../components/OutliersTable";
+import ToggleSwitch from "../components/ToggleSwitch";
 
 type HistoryData = {
     [key: string]: string[];
 };
+
 type Data = {
     [key: string]: {
         [key: string]: {
@@ -46,16 +50,9 @@ const HistoryPage = () => {
         }
     }, [selectedFile]);
 
-    // Helper function to convert a string to a number
-    const toNumber = (str: string): number => {
-        const n = parseFloat(str);
-        return isNaN(n) ? 0 : Number(n.toFixed(4));
-    };
-
     return (
         <div>
             <HomeButton/>
-
             <b>Select the JSON file:</b>
             <select value={selectedFile} onChange={(e) => setSelectedFile(e.target.value)}>
                 <option value="">-- Select a file --</option>
@@ -79,144 +76,9 @@ const HistoryPage = () => {
                             <Tab key={outerKey} value={outerKey} label={outerKey}/>
                         ))}
                     </Tabs>
-                    <h2 style={{fontSize: '60px', marginTop: '20px', marginBottom: '20px'}}>Outliers</h2>
-                    {Object.keys(resultsData).length > 0 && (
-                        <table>
-                            <thead>
-                            <tr>
-                                <th>System&apos;s Decision Making Confidence (%)</th>
-                                <th>Generalised Strings</th>
-                                <th>Occurrences</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {Object.keys(resultsData[selectedKey]['outliers'])
-                                .sort((a, b) => toNumber(a) - toNumber(b))
-                                .map((innerKey, index, array) => {
-                                    const current = resultsData[selectedKey]['outliers'][innerKey];
-                                    const previous = index > 0 ? resultsData[selectedKey]['outliers'][array[index - 1]] : {};
-
-                                    const occurrences: { [key: string]: number } = {};
-                                    for (const [key, value] of Object.entries(current)) {
-                                        if (!(key in previous)) {
-                                            occurrences[key] = value;
-                                        }
-                                    }
-
-                                    if (Object.keys(occurrences).length === 0) {
-                                        return null;
-                                    }
-
-                                    const threshold = 100 - toNumber(innerKey); // Convert threshold to 100-threshold
-
-                                    return (
-                                        <tr key={innerKey}>
-                                            <td colSpan={1}
-                                                style={{borderTop: '1px solid black', borderRight: '1px solid black'}}>
-                                                {threshold}
-                                            </td>
-                                            <td colSpan={1}
-                                                style={{borderTop: '1px solid black', borderRight: '1px solid black'}}>
-                                                {Object.keys(occurrences).map(key => (
-                                                    <div key={key}>{key}</div>
-                                                ))}
-                                            </td>
-                                            <td colSpan={1} className="border-t border-r border-black border-b">
-                                                {Object.values(occurrences).map((value, index) => (
-                                                    <div key={value}>
-                                                        {JSON.stringify(value)}
-                                                        {index !== Object.values(occurrences).length - 1 && (
-                                                            <hr className="border-dotted border-black my-1"/>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                            <tfoot>
-                            <tr>
-                                <td colSpan={2} style={{borderTop: '1px solid black'}}/>
-                            </tr>
-                            </tfoot>
-                        </table>
-                    )}
-
-                    <h2 style={{fontSize: '60px', marginTop: '20px', marginBottom: '20px'}}>Patterns</h2>
-                    {resultsData[selectedKey] && resultsData[selectedKey]['patterns'] && (
-                        <table>
-                            <thead>
-                            <tr>
-                                <th>Generic Patterns</th>
-                                <th>Minimum Ensured Coverage</th>
-                                <th>Specific Patterns</th>
-                                <th>Minimum Ensured Coverage</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {Object.keys(resultsData[selectedKey]['patterns']).map((innerKey, index, array) => {
-                                const current = resultsData[selectedKey]['patterns'][innerKey];
-                                const previous =
-                                    index < array.length - 1 ? resultsData[selectedKey]['patterns'][array[index + 1]] : {};
-
-                                const patterns: { [key: string]: number } = {};
-                                for (const [key, value] of Object.entries(current)) {
-                                    if (!(key in previous)) {
-                                        let sum = 0;
-                                        for (const nestedValue of Object.values(value)) {
-                                            for (const numericValue of Object.values(nestedValue)) {
-                                                sum += Number(numericValue);
-                                            }
-                                        }
-                                        patterns[key] = sum;
-                                    }
-                                }
-
-                                if (Object.keys(patterns).length === 0) {
-                                    return null;
-                                }
-
-                                return (
-                                    <>
-                                        {Object.entries(patterns).map(([pattern, value]) => {
-                                            const sum = value;
-                                            return (
-                                                <tr key={pattern}>
-                                                    <td style={{
-                                                        border: '1px solid black',
-                                                        textAlign: 'center'
-                                                    }}>{pattern}</td>
-                                                    <td style={{border: '1px solid black', textAlign: 'center'}}>
-                                                        {sum.toFixed(5)}
-                                                    </td>
-                                                    <td style={{border: '1px solid black', textAlign: 'center'}}>
-                                                        {Object.keys(current[pattern]).map((specificPattern) => (
-                                                            <div key={specificPattern}>{specificPattern}</div>
-                                                        ))}
-                                                    </td>
-                                                    <td style={{border: '1px solid black', textAlign: 'center'}}>
-                                                        {Object.entries(current[pattern]).map(([specificPattern, specificPatternValue]) => (
-                                                            <div key={specificPattern}>
-                                                                {Object.entries(specificPatternValue).map(([nestedPattern, nestedPatternValue]) => (
-                                                                    <div key={nestedPattern}>
-                                                                        {Number(nestedPatternValue).toFixed(5)}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ))}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </>
-                                );
-                            })}
-                            </tbody>
-                        </table>
-                    )}
-
-
+                    <ToggleSwitch/>
+                    <OutliersTable resultsData={resultsData} selectedKey={selectedKey}/>
+                    <PatternsTable resultsData={resultsData} selectedKey={selectedKey}/>
                 </div>
             )}
         </div>
