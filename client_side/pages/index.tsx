@@ -4,6 +4,7 @@ import {UploadContext} from '../components/UploadContext';
 import Papa from 'papaparse';
 import HistoryButton from "../components/HistoryButton";
 import Footer from "../components/Footer";
+import FancyTable from "../components/FancyTable";
 
 
 function FileUploadForm() {
@@ -151,24 +152,7 @@ Processing...
                     </div>
                 )}
             </div>
-            <table className="mt-4">
-                <thead>
-                <tr>
-                    {csvData[0]?.map((header) => (
-                        <th key={header}>{header}</th>
-                    ))}
-                </tr>
-                </thead>
-                <tbody>
-                {csvData.slice(1).map((row, index) => (
-                    <tr key={index}>
-                        {row.map((cell, index) => (
-                            <td key={index}>{cell}</td>
-                        ))}
-                    </tr>
-                ))}
-                </tbody>
-            </table>
+            <FancyTable csvData={csvData}/>
             <HistoryButton/>
             <Footer/>
         </div>

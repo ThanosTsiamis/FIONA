@@ -3,7 +3,7 @@ import React from 'react';
 function Footer() {
     return (
         <footer className="bg-neutral-100 text-center dark:bg-neutral-600 lg:text-left">
-            <div className="container p-6 text-neutral-800 dark:text-neutral-200">
+            <div className="container p-1 text-neutral-800 dark:text-neutral-200">
                 <div className="grid gap-4 lg:grid-cols-2">
                     <div className="mb-6 md:mb-0">
                         <h5 className="mb-2 font-medium uppercase">About</h5>
@@ -46,7 +46,7 @@ function Footer() {
                 </div>
             </div>
             <div
-                className="bg-neutral-200 p-4 text-center text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
+                className="bg-neutral-200 p-1 text-center text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
                 Developed at:
                 <a className="text-neutral-800 dark:text-neutral-400" href="https://www.uu.nl/en/">
                     Utrecht University
