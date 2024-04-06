@@ -5,6 +5,7 @@ import Papa from 'papaparse';
 import HistoryButton from "../components/HistoryButton";
 import Footer from "../components/Footer";
 import FancyTable from "../components/FancyTable";
+import Header from "../components/Header";
 
 
 function FileUploadForm() {
@@ -89,12 +90,7 @@ function FileUploadForm() {
 
     return (
         <div className={'flex flex-col h-screen justify-between'}>
-            <header className="flex items-center mb-4 ml-10 bg-gray-100">
-                <img src="/LogoFIONA.png" alt="Logo" className="w-48 h-48 mr-2 "/>
-                <h1 className="text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-1xl lg:text-5xl dark:text-white">
-                    FIONA: Categorical Outlier Detector
-                </h1>
-            </header>
+            <Header/>
             <p className="mb-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">
                 Discover hidden insights and unlock the true potential of your data with our cutting-edge categorical
                 outlier

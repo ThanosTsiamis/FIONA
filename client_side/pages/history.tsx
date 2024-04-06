@@ -4,6 +4,9 @@ import HomeButton from "../components/HomeButton";
 import PatternsTable from "../components/PatternsTable";
 import OutliersTable from "../components/OutliersTable";
 import ToggleSwitch from "../components/ToggleSwitch";
+import SimpleBars from "../components/SimpleBars";
+import Footer from "../components/Footer";
+
 
 type HistoryData = {
     [key: string]: string[];
@@ -86,7 +89,7 @@ const HistoryPage = () => {
                             <PatternsTable resultsData={resultsData} selectedKey={selectedKey}/>
                         </>
                     ) : (
-                        <div>Brief Section</div>
+                        <SimpleBars/>
                     )}
                 </div>
             )}
