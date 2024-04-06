@@ -17,7 +17,6 @@ demonstration_video/
 
 # Ignore git files
 .git/
-.git/
 
 # Ignore github files
 .github/
