@@ -1,5 +1,5 @@
 # Base Image
-FROM python:3.8.16
+FROM python:3.8.16-slim
 
 # set working directory
 WORKDIR /usr/src/app
