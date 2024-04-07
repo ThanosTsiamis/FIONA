@@ -20,3 +20,10 @@ demonstration_video/
 
 # Ignore github files
 .github/
+
+# Dependency directories
+node_modules/
+
+# Development tools
+CODEOWNERS
+README.md
