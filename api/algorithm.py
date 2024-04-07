@@ -207,6 +207,13 @@ def calculate_penalty(specificity_level: int, penalty: int):
 
 
 def node_distance(node1: Node, node2: Node, penalty: int):
+    """
+    This function offers a clever approach to determining the distance between two nodes, circumventing the need to
+    traverse a tree structure. It assesses the distance by examining if the nodes belong to the same class and share
+    identical data lengths. To address nodes from varying classes, a penalty system is introduced, ensuring that nodes
+    of distinct classes are considered more distant from each other.
+    :return The distance between two nodes.
+    """
     sameClass = node1.data[:, 1][0] == node2.data[:, 1][0]
     sameLength = len(node1.data[:, 0][0]) == len(node2.data[:, 0][0])
     specificity_sum = node1.specificity_level + node2.specificity_level
@@ -725,6 +732,10 @@ def process_column(column_name, single_column):
 
 
 def reset_global_values():
+    """
+    Reset a set of global variables to their default states.
+    :return: None
+    """
     global ndistinct_manually_set
     global memory_problems
     global ndistinct_manual_setting
