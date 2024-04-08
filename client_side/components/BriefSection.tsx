@@ -13,7 +13,7 @@ ChartJS.register(
 
 interface DataItem {
     [key: string]: {
-        [time: string]: number;
+        [representative: string]: number;
     };
 }
 
@@ -35,9 +35,10 @@ const processData = (outliers: Outliers) => {
     const dataPoints: { [key: string]: number } = {};
 
     Object.values(outliers).forEach((dataItem) => {
-        Object.entries(dataItem).forEach(([band, times]) => {
-            Object.entries(times).forEach(([time, count]) => {
-                const label = `${band}: ${time}`;
+        Object.entries(dataItem).forEach(([band, representatives]) => {
+            Object.entries(representatives).forEach(([representative, count]) => {
+                
+                const label = `${representative}`;
                 labels.add(label);
                 dataPoints[label] = (dataPoints[label] || 0) + count;
             });
