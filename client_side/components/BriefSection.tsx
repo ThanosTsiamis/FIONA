@@ -27,7 +27,7 @@ interface Props {
             outliers: Outliers;
         };
     };
-    keyName: string; // This keyName can be any string e.g., 'id', 'movies', '__age__', etc.
+    keyName: string;
 }
 
 const processData = (outliers: Outliers) => {
@@ -36,11 +36,14 @@ const processData = (outliers: Outliers) => {
 
     Object.values(outliers).forEach((dataItem) => {
         Object.entries(dataItem).forEach(([band, representatives]) => {
-            Object.entries(representatives).forEach(([representative, count]) => {
+            Object.entries(representatives).forEach(([representative, outlierwithFreq]) => {
                 
                 const label = `${representative}`;
                 labels.add(label);
-                dataPoints[label] = (dataPoints[label] || 0) + count;
+                Object.entries(outlierwithFreq).forEach(([outlier, freq]) => {
+                    console.log(outlier,"~~~~", freq)
+                    dataPoints[label] = (dataPoints[label] || 0) + freq;
+                });
             });
         });
     });
@@ -49,7 +52,7 @@ const processData = (outliers: Outliers) => {
         labels: Array.from(labels),
         datasets: [
             {
-                label: 'Times',
+                label: `Outliers`,
                 data: Array.from(labels).map(label => dataPoints[label]),
                 backgroundColor: 'rgba(53, 162, 235, 0.5)',
             },
