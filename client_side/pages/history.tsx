@@ -4,9 +4,7 @@ import HomeButton from "../components/HomeButton";
 import PatternsTable from "../components/PatternsTable";
 import OutliersTable from "../components/OutliersTable";
 import ToggleSwitch from "../components/ToggleSwitch";
-import SimpleBars from "../components/SimpleBars";
-import Footer from "../components/Footer";
-
+import BriefSection from "../components/BriefSection";
 
 type HistoryData = {
     [key: string]: string[];
@@ -28,7 +26,7 @@ const HistoryPage = () => {
     const [resultsData, setResultsData] = useState<Data>({});
     const [headers, setHeaders] = useState<string[]>([]);
     const [selectedKey, setSelectedKey] = useState<string>('');
-    const [detailedView, setDetailedView] = useState<boolean>(false); // New state for detailed view
+    const [detailedView, setDetailedView] = useState<boolean>(false);
 
     useEffect(() => {
         const fetchHistoryData = async () => {
@@ -76,20 +74,22 @@ const HistoryPage = () => {
                         scrollButtons="auto"
                         aria-label="tabs"
                     >
-                        {headers.map((outerKey) => (
-                            <Tab key={outerKey} value={outerKey} label={outerKey}/>
+                        {headers.map((headerKey) => (
+                            <Tab key={headerKey} value={headerKey} label={headerKey}/>
                         ))}
                     </Tabs>
                     <ToggleSwitch
-                        onChange={(checked: boolean) => setDetailedView(checked)}/> {/* Pass onChange handler */}
-                    {/* Conditionally render tables based on detailedView state */}
+                        onChange={(checked: boolean) => setDetailedView(checked)}/>
                     {detailedView ? (
                         <>
                             <OutliersTable resultsData={resultsData} selectedKey={selectedKey}/>
                             <PatternsTable resultsData={resultsData} selectedKey={selectedKey}/>
                         </>
                     ) : (
-                        <SimpleBars/>
+                        resultsData[selectedKey] ? (
+                            <BriefSection data={{[selectedKey]: {outliers: resultsData[selectedKey]}}}
+                                          keyName={selectedKey}/>
+                        ) : null
                     )}
                 </div>
             )}
