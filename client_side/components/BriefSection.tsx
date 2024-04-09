@@ -64,6 +64,8 @@ const processData = (outliers: Outliers) => {
 };
 
 const options = {
+    maintainAspectRatio: true,
+    responsive: true,
     scales: {
         y: {
             beginAtZero: true,
@@ -81,8 +83,7 @@ const BriefSection: React.FC<Props> = ({data, keyName}) => {
     const chartData = processData(specificData.outliers);
 
     return (
-        <div>
-            <h2>Brief Section</h2>
+        <div className="w-full md:w-1/2 lg:w-1/3 xl:w-1/2 h-96">
             <Bar data={chartData} options={options}/>
         </div>
     );

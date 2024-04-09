@@ -5,6 +5,7 @@ import PatternsTable from "../components/PatternsTable";
 import OutliersTable from "../components/OutliersTable";
 import ToggleSwitch from "../components/ToggleSwitch";
 import BriefSection from "../components/BriefSection";
+import InfoBox from "../components/InfoBox";
 
 type HistoryData = {
     [key: string]: string[];
@@ -87,8 +88,12 @@ const HistoryPage = () => {
                         </>
                     ) : (
                         resultsData[selectedKey] ? (
-                            <BriefSection data={{[selectedKey]: {outliers: resultsData[selectedKey]}}}
-                                          keyName={selectedKey}/>
+                            <>
+                                <BriefSection data={{[selectedKey]: {outliers: resultsData[selectedKey]}}}
+                                              keyName={selectedKey}/>
+                                <InfoBox
+                                    message={"The further to the left a bar chart, the more certain the system is that it is an outlier."}/>
+                            </>
                         ) : null
                     )}
                 </div>
