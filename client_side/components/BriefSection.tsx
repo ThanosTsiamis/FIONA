@@ -33,16 +33,19 @@ interface Props {
 const processData = (outliers: Outliers) => {
     const labels = new Set<string>();
     const dataPoints: { [key: string]: number } = {};
+    const seenOutliers: { [key: string]: Set<string> } = {};
 
     Object.values(outliers).forEach((dataItem) => {
         Object.entries(dataItem).forEach(([band, representatives]) => {
             Object.entries(representatives).forEach(([representative, outlierwithFreq]) => {
-                
                 const label = `${representative}`;
                 labels.add(label);
+                seenOutliers[label] = seenOutliers[label] || new Set<string>();
                 Object.entries(outlierwithFreq).forEach(([outlier, freq]) => {
-                    console.log(outlier,"~~~~", freq)
-                    dataPoints[label] = (dataPoints[label] || 0) + freq;
+                    if (!seenOutliers[label].has(outlier)) {
+                        dataPoints[label] = (dataPoints[label] || 0) + freq;
+                        seenOutliers[label].add(outlier);
+                    }
                 });
             });
         });
