@@ -1,6 +1,16 @@
 import React from 'react';
 import {Bar} from 'react-chartjs-2';
-import {BarElement, CategoryScale, Chart as ChartJS, Legend, LinearScale, Title, Tooltip} from 'chart.js';
+import {
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Legend,
+    LinearScale,
+    LogarithmicScale,
+    Title,
+    Tooltip
+} from 'chart.js';
+import formatters from "chart.js/dist/core/core.ticks";
 
 ChartJS.register(
     CategoryScale,
@@ -8,7 +18,8 @@ ChartJS.register(
     BarElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
+    LogarithmicScale
 );
 
 interface DataItem {
@@ -58,6 +69,8 @@ const processData = (outliers: Outliers) => {
                 label: `Outliers`,
                 data: Array.from(labels).map(label => dataPoints[label]),
                 backgroundColor: 'rgba(53, 162, 235, 0.5)',
+                borderColor: 'rgba(53, 162, 235, 1)',
+                barThickness: 20
             },
         ],
     };
@@ -68,6 +81,7 @@ const options = {
     responsive: true,
     scales: {
         y: {
+            type: 'logarithmic',
             beginAtZero: true,
         },
     },
