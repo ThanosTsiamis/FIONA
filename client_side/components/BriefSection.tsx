@@ -83,7 +83,7 @@ const options = {
     responsive: true,
     scales: {
         y: {
-            type: 'logarithmic',
+            type: 'logarithmic' as const,
             beginAtZero: true,
         },
     },
