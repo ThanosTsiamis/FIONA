@@ -10,7 +10,6 @@ import {
     Title,
     Tooltip
 } from 'chart.js';
-import formatters from "chart.js/dist/core/core.ticks";
 
 ChartJS.register(
     CategoryScale,
@@ -45,22 +44,25 @@ const processData = (outliers: Outliers) => {
     const labels = new Set<string>();
     const dataPoints: { [key: string]: number } = {};
     const seenOutliers: { [key: string]: Set<string> } = {};
+    console.log(outliers);
+    console.log(outliers.outliers)
+    let dataItem = outliers.outliers
 
-    Object.values(outliers).forEach((dataItem) => {
-        Object.entries(dataItem).forEach(([band, representatives]) => {
-            Object.entries(representatives).forEach(([representative, outlierwithFreq]) => {
-                const label = `${representative}`;
-                labels.add(label);
-                seenOutliers[label] = seenOutliers[label] || new Set<string>();
-                Object.entries(outlierwithFreq).forEach(([outlier, freq]) => {
-                    if (!seenOutliers[label].has(outlier)) {
-                        dataPoints[label] = (dataPoints[label] || 0) + freq;
-                        seenOutliers[label].add(outlier);
-                    }
-                });
+
+    Object.entries(dataItem).forEach(([band, representatives]) => {
+        Object.entries(representatives).forEach(([representative, outlierwithFreq]) => {
+            const label = `${representative}`;
+            labels.add(label);
+            seenOutliers[label] = seenOutliers[label] || new Set<string>();
+            Object.entries(outlierwithFreq).forEach(([outlier, freq]) => {
+                if (!seenOutliers[label].has(outlier)) {
+                    dataPoints[label] = (dataPoints[label] || 0) + freq;
+                    seenOutliers[label].add(outlier);
+                }
             });
         });
     });
+
 
     return {
         labels: Array.from(labels),
