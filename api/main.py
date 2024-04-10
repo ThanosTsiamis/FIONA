@@ -120,6 +120,3 @@ if __name__ == "__main__":
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     logger.debug(f'The current time is: {current_time}')
     app.run(host="0.0.0.0", debug=True)
-    filename = "/json_dumps/dirty.csv"
-    big_dict = process(filename)
-    json_serialised = json.dumps(big_dict)

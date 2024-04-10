@@ -2,7 +2,11 @@ import React, {useContext, useRef, useState} from 'react';
 import {useRouter} from 'next/router';
 import {UploadContext} from '../components/UploadContext';
 import Papa from 'papaparse';
-import Head from 'next/head';
+import HistoryButton from "../components/HistoryButton";
+import Footer from "../components/Footer";
+import FancyTable from "../components/FancyTable";
+import Header from "../components/Header";
+
 
 function FileUploadForm() {
     const {filename, setFilename} = useContext(UploadContext);
@@ -86,12 +90,7 @@ function FileUploadForm() {
 
     return (
         <div className={'flex flex-col h-screen justify-between'}>
-            <header className="flex items-center mb-4 ml-10 bg-gray-100">
-                <img src="/LogoFIONA.png" alt="Logo" className="w-48 h-48 mr-2 "/>
-                <h1 className="text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-1xl lg:text-5xl dark:text-white">
-                    FIONA: Categorical Outlier Detector
-                </h1>
-            </header>
+            <Header/>
             <p className="mb-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">
                 Discover hidden insights and unlock the true potential of your data with our cutting-edge categorical
                 outlier
@@ -149,84 +148,9 @@ Processing...
                     </div>
                 )}
             </div>
-            <table className="mt-4">
-                <thead>
-                <tr>
-                    {csvData[0]?.map((header) => (
-                        <th key={header}>{header}</th>
-                    ))}
-                </tr>
-                </thead>
-                <tbody>
-                {csvData.slice(1).map((row, index) => (
-                    <tr key={index}>
-                        {row.map((cell, index) => (
-                            <td key={index}>{cell}</td>
-                        ))}
-                    </tr>
-                ))}
-                </tbody>
-            </table>
-            <div className="border border-gray-200 rounded-md p-4 max-w-xs absolute top-8 right-8">
-                <p className="text-lg font-semibold">
-                    <a href="history" className="text-gray-800 no-underline hover:underline">
-                        History
-                    </a>{' '}
-                    <span role="img" aria-label="book">
-📖
-</span>
-                </p>
-            </div>
-            <footer className="bg-neutral-100 text-center dark:bg-neutral-600 lg:text-left">
-                <div className="container p-6 text-neutral-800 dark:text-neutral-200">
-                    <div className="grid gap-4 lg:grid-cols-2">
-                        <div className="mb-6 md:mb-0">
-                            <h5 className="mb-2 font-medium uppercase">About</h5>
-                            <p className="mb-4">
-                                Fiona is the result of Thanos Tsiamis' master thesis, developed under the supervision of
-                                Dr. A.A.A.
-                                (Hakim) Qahtan for Utrecht University during the academic year 2022-2023.
-                            </p>
-                        </div>
-
-                        <div className="mb-6 md:mb-0">
-                            <h5 className="mb-2 font-medium uppercase">Links</h5>
-
-                            <ul className="mb-0 list-none">
-                                <li>
-                                    <a href="" className="text-neutral-800 dark:text-neutral-200">
-                                        Github Repository
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="" className="text-neutral-800 dark:text-neutral-200">
-                                        Master Thesis Paper (coming soon)
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="https://github.com/ThanosTsiamis"
-                                       className="text-neutral-800 dark:text-neutral-200">
-                                        Thanos Tsiamis's Github
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="https://github.com/qahtanaa"
-                                       className="text-neutral-800 dark:text-neutral-200">
-                                        Dr. A.A.A. (Hakim) Qahtan's Github
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div
-                    className="bg-neutral-200 p-4 text-center text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
-                    Developed at:
-                    <a className="text-neutral-800 dark:text-neutral-400" href="https://www.uu.nl/en/">
-                        Utrecht University
-                    </a>
-                </div>
-            </footer>
+            <FancyTable csvData={csvData}/>
+            <HistoryButton/>
+            <Footer/>
         </div>
     );
 }
