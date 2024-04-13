@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import InfoBox from "./InfoBox";
 
 type Data = {
     [key: string]: {
@@ -76,7 +77,7 @@ const PatternsTable: React.FC<{ resultsData: Data, selectedKey: string }> = ({re
                                                     <td colSpan={2}>
                                                         {Object.entries(current[pattern]).map(([specificPattern, specificPatternValue]) => (
                                                             <div key={specificPattern}>
-                                                                <strong>{specificPattern}</strong>
+                                                                <strong>{specificPattern}: Coverage of value</strong>
                                                                 {Object.entries(specificPatternValue).map(([nestedPattern, nestedPatternValue]) => (
                                                                     <div key={nestedPattern}>
                                                                         {nestedPattern}: {Number(nestedPatternValue).toFixed(5)}
@@ -96,6 +97,7 @@ const PatternsTable: React.FC<{ resultsData: Data, selectedKey: string }> = ({re
                     </tbody>
                 </table>
             )}
+            <InfoBox message={'Click on a row to expand the specific patterns'}/>
         </>
     );
 };
