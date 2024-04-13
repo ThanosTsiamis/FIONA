@@ -21,7 +21,8 @@
     "react": "18.1.0",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "18.1.0",
-    "react-table": "^7.8.0"
+    "react-table": "^7.8.0",
+    "react-tooltip": "^5.26.3"
   },
   "devDependencies": {
     "@mui/x-charts": "^7.1.1",
