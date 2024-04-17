@@ -1,4 +1,5 @@
 import React from 'react';
+import Tooltip from "@mui/material/Tooltip";
 
 function Footer() {
     return (
@@ -20,13 +21,17 @@ function Footer() {
                         <div className="mb-6 md:mb-0">
                             <ul className="mb-0 list-none">
                                 <li>
-                                    <a href="" className="text-neutral-800 dark:text-neutral-200">
+                                    <a href="https://github.com/ThanosTsiamis/FIONA"
+                                       className="text-neutral-800 dark:text-neutral-200">
                                         Github Repository
                                     </a>
                                 </li>
                                 <li>
+
                                     <a href="" className="text-neutral-800 dark:text-neutral-200">
-                                        Master Thesis Paper (coming soon)
+                                        <Tooltip title="Coming soon!">
+                                            <span>Master Thesis Paper</span>
+                                        </Tooltip>
                                     </a>
                                 </li>
                             </ul>
