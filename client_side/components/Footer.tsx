@@ -16,7 +16,7 @@ function Footer() {
                         </p>
                     </div>
 
-                    <div className="grid gap-0.5 lg:grid-cols-2 mb-2 md:mb-0">
+                    <div className="grid lg:grid-cols-2">
                         <h5 className="mb-2 font-medium uppercase">Links</h5>
                         <div className="mb-6 md:mb-0">
                             <ul className="mb-0 list-none">
@@ -27,7 +27,6 @@ function Footer() {
                                     </a>
                                 </li>
                                 <li>
-
                                     <a href="" className="text-neutral-800 dark:text-neutral-200">
                                         <Tooltip title="Coming soon!">
                                             <span>Master Thesis Paper</span>

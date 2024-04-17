@@ -92,7 +92,7 @@ const HistoryPage = () => {
                                 <BriefSection data={{[selectedKey]: {outliers: resultsData[selectedKey]}}}
                                               keyName={selectedKey}/>
                                 <InfoBox
-                                    message={"The further to the left a bar chart, the more certain the system is that it is an outlier."}/>
+                                    message={"This bar chart orders bars from left to right to show certainty of outliers: the leftmost bar is the most significant outlier, and each subsequent bar to the right is less so."}/>
                             </>
                         ) : null
                     )}
