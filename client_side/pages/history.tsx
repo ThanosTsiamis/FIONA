@@ -56,15 +56,24 @@ const HistoryPage = () => {
     return (
         <div>
             <HomeButton/>
-            <b>Select the JSON file:</b>
-            <select value={selectedFile} onChange={(e) => setSelectedFile(e.target.value)}>
-                <option value="">-- Select a file --</option>
-                {Object.keys(historyData).map((key) => (
-                    <option key={key} value={historyData[key]}>
-                        {historyData[key]}
-                    </option>
-                ))}
-            </select>
+            <div className="bg-white shadow-md rounded-lg p-4 max-w-sm mx-auto ml-4">
+                <label htmlFor="fileSelect" className="block text-sm font-medium text-gray-700 mb-1">
+                    Select the JSON file:
+                </label>
+                <select
+                    id="fileSelect"
+                    value={selectedFile}
+                    onChange={(e) => setSelectedFile(e.target.value)}
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm"
+                >
+                    <option value="">-- Select a file --</option>
+                    {Object.keys(historyData).map((key) => (
+                        <option key={key} value={historyData[key]}>
+                            {historyData[key]}
+                        </option>
+                    ))}
+                </select>
+            </div>
 
             {selectedFile && (
                 <div>
