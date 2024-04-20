@@ -26,7 +26,7 @@ For the **front end**:
 
 One-liner in terminal: `cd .\client_side\ & npm install & npm run dev`
 
-Note: The above command may not work on Windows. In that case, swap the ambersands for semicolons:
+Note: The above command may not work on Windows. In that case, swap the ampersands for semicolons:
 
 Step by step:
 

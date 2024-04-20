@@ -24,7 +24,7 @@ def upload_file():
         f.save("resources/data_repository/" + f.filename)
         ndistinct_manual_set = request.form.get('number')
         long_column_cutoff = request.form.get('long_column_cutoff')
-        largeFile_threshold_input = request.form.get('largeFile_threshold_input')
+        large_file_threshold_input = request.form.get('largeFile_threshold_input')
         if ndistinct_manual_set is not None and ndistinct_manual_set != "":
             ndistinct_manual_set = int(ndistinct_manual_set)
         else:
@@ -37,15 +37,15 @@ def upload_file():
             # Handle the case when no number is provided
             long_column_cutoff = None
 
-        if largeFile_threshold_input is not None and largeFile_threshold_input != "":
-            largeFile_threshold_input = int(largeFile_threshold_input)
+        if large_file_threshold_input is not None and large_file_threshold_input != "":
+            large_file_threshold_input = int(large_file_threshold_input)
         else:
             # Handle the case when no number is provided
-            largeFile_threshold_input = None
+            large_file_threshold_input = None
 
         outlying_elements = process(f, ndistinct_manual_set, first_time=True,
                                     manual_override_long_column=long_column_cutoff,
-                                    manual_override_large_file_threshold=largeFile_threshold_input)
+                                    manual_override_large_file_threshold=large_file_threshold_input)
         if isinstance(outlying_elements, list):
             columns = outlying_elements
             for column in columns:
@@ -119,4 +119,4 @@ def get_json_files():
 if __name__ == "__main__":
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     logger.debug(f'The current time is: {current_time}')
-    app.run(host="0.0.0.0", debug=True)
+    app.run(host="0.0.0.0", debug=False)
