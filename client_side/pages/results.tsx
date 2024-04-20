@@ -1,6 +1,6 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { UploadContext } from '../components/UploadContext';
-import { Tab, Tabs } from "@mui/material";
+import React, {useContext, useEffect, useState} from 'react';
+import {UploadContext} from '../components/UploadContext';
+import {Tab, Tabs} from "@mui/material";
 import HomeButton from "../components/HomeButton";
 import PatternsTable from "../components/PatternsTable";
 import OutliersTable from "../components/OutliersTable";
@@ -19,7 +19,7 @@ type Data = {
 };
 
 const ResultsPage = () => {
-    const { filename } = useContext(UploadContext);
+    const {filename} = useContext(UploadContext);
     const [data, setData] = useState<Data>({});
     const [headers, setHeaders] = useState<string[]>([]);
     const [selectedKey, setSelectedKey] = useState<string>('');
@@ -65,7 +65,7 @@ const ResultsPage = () => {
                         <BriefSection data={{[selectedKey]: {outliers: data[selectedKey]}}}
                                       keyName={selectedKey}/>
                         <InfoBox
-                            message={"The further to the left a bar chart, the more certain the system is that it is an outlier."}/>
+                            message={"This bar chart orders bars from left to right to show certainty of outliers: the leftmost bar is the most significant outlier, and each subsequent bar to the right is less so."}/>
                     </>
                 ) : null
             )}
