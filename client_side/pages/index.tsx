@@ -17,7 +17,6 @@ function FileUploadForm() {
     const router = useRouter();
     const [csvData, setCsvData] = useState<Array<Array<string>>>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [enableParallel, setEnableParallel] = useState(false);
     const [error, setError] = useState('');
     const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
     const [isStillLoading, setIsStillLoading] = useState(false);
