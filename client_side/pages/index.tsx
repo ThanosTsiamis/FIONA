@@ -127,7 +127,7 @@ function FileUploadForm() {
                         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
                         disabled={isLoading}
                     >
-                        Upload
+                        Run
                     </button>
                 </form>
                 {error && <p className="text-red-500">{error}</p>} {/* Display error message */}
