@@ -26,7 +26,7 @@ const FancyTable: React.FC<TableProps> = ({ csvData }) => {
               {row.map((cell, cellIndex) => (
                 <td
                   key={cellIndex}
-                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                  className="px-6 py-4 whitespace-normal text-sm text-gray-900"
                 >
                   {cell}
                 </td>

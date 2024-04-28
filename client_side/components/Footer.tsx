@@ -22,7 +22,7 @@ function Footer() {
                             <ul className="mb-0 list-none">
                                 <li>
                                     <a href="https://github.com/ThanosTsiamis/FIONA"
-                                       className="text-neutral-800 dark:text-neutral-200">
+                                       className="text-neutral-800 dark:text-neutral-200 hover:text-blue-800">
                                         Github Repository
                                     </a>
                                 </li>
@@ -39,13 +39,13 @@ function Footer() {
                             <ul className="mb-0 list-none">
                                 <li>
                                     <a href="https://github.com/ThanosTsiamis"
-                                       className="text-neutral-800 dark:text-neutral-200">
+                                       className="text-neutral-800 dark:text-neutral-200 hover:text-blue-800">
                                         Thanos Tsiamis&apos;s Github
                                     </a>
                                 </li>
                                 <li>
                                     <a href="https://github.com/qahtanaa"
-                                       className="text-neutral-800 dark:text-neutral-200">
+                                       className="text-neutral-800 dark:text-neutral-200 hover:text-blue-800">
                                         Dr. A.A.A. (Hakim) Qahtan&apos;s Github
                                     </a>
                                 </li>
@@ -56,8 +56,8 @@ function Footer() {
             </div>
             <div
                 className="bg-neutral-200 p-1 text-center text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
-                Developed at:
-                <a className="text-neutral-800 dark:text-neutral-400" href="https://www.uu.nl/en/">
+                Developed at: &nbsp;
+                <a className="text-neutral-800 dark:text-neutral-400 hover:text-blue-800" href="https://www.uu.nl/en/">
                     Utrecht University
                 </a>
             </div>
