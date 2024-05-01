@@ -114,15 +114,17 @@ def calculate_machine_limit():
     :return: the maximum size of the matrix.
     """
     try:
-        for i in range(1000, 200000, 1000):
+        for i in range(1000, 2000000000, 1000):
             in_memory_variable = np.empty([i, i], dtype='float64')
-            gc.collect()
+            del in_memory_variable
     except MemoryError:
         gc.collect()
         # take a lower bound to make room for the other variables as well.
         if memory_problems:
+            logger.debug("Variable i is: " + str(i))
             return i - 8000
         else:
+            logger.debug("Variable i is: " + str(i))
             return i - 1000
 
 
