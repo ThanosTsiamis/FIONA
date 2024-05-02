@@ -7,6 +7,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from anytree import Node
+from cachetools import cached, TTLCache
 from doubledouble import DoubleDouble
 from joblib import delayed, Parallel
 
@@ -108,15 +109,19 @@ def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
         return set(word_split(df[:, 0]))
 
 
-def calculate_machine_limit():
+@cached(cache=TTLCache(maxsize=1, ttl=600))
+def calculate_machine_limit(dataset_size: int):
     """
     Find the maximum size of an empty NumPy matrix that can be created without causing a memory overflow.
     :return: the maximum size of the matrix.
     """
     try:
-        for i in range(1000, 2000000000, 1000):
+        for i in range(1, dataset_size + 100):
             in_memory_variable = np.empty([i, i], dtype='float64')
             del in_memory_variable
+            variable = i
+        logger.debug("Variable i is: " + str(i))
+        return variable
     except MemoryError:
         gc.collect()
         # take a lower bound to make room for the other variables as well.
@@ -141,7 +146,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     root = Node(" ", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     global long_column_limit
-    limit = calculate_machine_limit()
+    limit = calculate_machine_limit(column.shape[0])
     while node_list:
         current_node = node_list.pop(0)
         child_list = []
@@ -341,7 +346,7 @@ def process_attribute(dataframe: pd.DataFrame):
         tries = 0  # failsafe mechanism
         while True or tries < 40:
             leaves = root.leaves
-            if len(leaves) < calculate_machine_limit():
+            if len(leaves) < calculate_machine_limit(dataset_size=dataframe.shape[0]):
                 break
             else:
                 # if the file is large then going to the next fibonacci won't do much.
