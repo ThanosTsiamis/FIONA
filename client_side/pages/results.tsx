@@ -1,12 +1,12 @@
 import React, {useContext, useEffect, useState} from 'react';
 import {UploadContext} from '../components/UploadContext';
 import {Tab, Tabs} from "@mui/material";
-import HomeButton from "../components/HomeButton";
 import PatternsTable from "../components/PatternsTable";
 import OutliersTable from "../components/OutliersTable";
 import ToggleSwitch from "../components/ToggleSwitch";
 import BriefSection from "../components/BriefSection";
 import InfoBox from "../components/InfoBox";
+import PageButton from "../components/PageButton";
 
 type Data = {
     [key: string]: {
@@ -41,7 +41,7 @@ const ResultsPage = () => {
 
     return (
         <div>
-            <HomeButton/>
+            <PageButton href={"/"} label={"Main Page"} icon={"🏠"} iconLabel={"home"}></PageButton>
             <Tabs
                 value={selectedKey}
                 onChange={(e, newValue) => setSelectedKey(newValue)}

@@ -1,11 +1,11 @@
 import React, {useEffect, useState} from 'react';
 import {Tab, Tabs} from "@mui/material";
-import HomeButton from "../components/HomeButton";
 import PatternsTable from "../components/PatternsTable";
 import OutliersTable from "../components/OutliersTable";
 import ToggleSwitch from "../components/ToggleSwitch";
 import BriefSection from "../components/BriefSection";
 import InfoBox from "../components/InfoBox";
+import PageButton from "../components/PageButton";
 
 type HistoryData = {
     [key: string]: string[];
@@ -55,7 +55,7 @@ const HistoryPage = () => {
 
     return (
         <div>
-            <HomeButton/>
+            <PageButton href={"/"} label={"Main Page"} icon={"🏠"} iconLabel={"home"}></PageButton>
             <div className="bg-white shadow-md rounded-lg p-4 max-w-sm mx-auto ml-4">
                 <label htmlFor="fileSelect" className="block text-sm font-medium text-gray-700 mb-1">
                     Select the JSON file:
