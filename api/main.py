@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 
 import ujson as ujson
+from cachetools import cached, TTLCache
 from flask import Flask, request, jsonify, redirect, Response
 
 from algorithm import process, logger
@@ -89,6 +90,7 @@ def upload_file():
         return redirection
 
 
+@cached(cache=TTLCache(maxsize=1, ttl=60))
 @app.route("/api/fetch/<string:filename>", methods=['GET'])
 def fetch(filename):
     file_path = os.path.join("resources/json_dumps", filename)
@@ -105,6 +107,7 @@ def fetch(filename):
     return response
 
 
+@cached(cache=TTLCache(maxsize=1, ttl=180))
 @app.route("/api/history", methods=['GET'])
 def get_json_files():
     json_files = []

@@ -2,11 +2,11 @@ import React, {useContext, useEffect, useRef, useState} from 'react';
 import {useRouter} from 'next/router';
 import {UploadContext} from '../components/UploadContext';
 import Papa from 'papaparse';
-import HistoryButton from "../components/HistoryButton";
 import Footer from "../components/Footer";
 import FancyTable from "../components/FancyTable";
 import Header from "../components/Header";
 import CircularProgress from '@mui/material/CircularProgress';
+import PageButton from "../components/PageButton";
 
 function FileUploadForm() {
     const {setFilename} = useContext(UploadContext);
@@ -130,7 +130,11 @@ function FileUploadForm() {
                     </button>
                 </form>
                 {error && <p className="text-red-500">{error}</p>}
-                <button onClick={toggleAdvancedOptions}>
+                <button
+                    onClick={toggleAdvancedOptions}
+                    disabled={showAdvancedOptions}
+                    className={`mt-4 rounded-full py-3 pr-5 ${showAdvancedOptions ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gray-50 hover:bg-gray-200 text-black'}`}
+                >
                     Click here to enable advanced options
                 </button>
                 {isLoading && (
@@ -145,7 +149,7 @@ function FileUploadForm() {
                 )}
             </div>
             <FancyTable csvData={csvData}/>
-            <HistoryButton/>
+            <PageButton href={"history"} label={"History"} icon={"📖"} iconLabel={"book"}></PageButton>
             <Footer/>
         </div>
     );
