@@ -9,7 +9,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import PageButton from "../components/PageButton";
 
 function FileUploadForm() {
-    const {filename, setFilename} = useContext(UploadContext);
+    const {setFilename} = useContext(UploadContext);
     const fileInput = useRef<HTMLInputElement>(null);
     const numberInput = useRef<HTMLInputElement>(null);
     const longColumnCutoffInput = useRef<HTMLInputElement>(null)
