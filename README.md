@@ -20,7 +20,7 @@ There are 2 ways to run the project: (i) [Locally](#local-execution) and (ii) in
 
 ### Local execution
 
-**Important Note**: Make sure that node.Js and Python are installed in your system.
+**Important Note**: Make sure that Node.js and Python are installed in your system.
 
 For the **front end**:
 
