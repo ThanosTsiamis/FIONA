@@ -19,6 +19,8 @@ ndistinct_manual_setting = 2
 large_file = False
 long_column_limit = 36  # This is based on the length of a UUID
 large_file_threshold = 500000
+regex_only = False
+generalised_only = False
 
 
 def read_data(filename, column_name=None):
@@ -621,6 +623,10 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
     apply_generalised_comparison = True
     if avg_regex_ratio > avg_generalised_ratio and avg_regex_ratio < 0.98 and avg_regex_ratio > 0.42:
         apply_generalised_comparison = False
+    if regex_only:
+        apply_generalised_comparison = False
+    if generalised_only:
+        apply_generalised_comparison = True
     for threshold_level in col_outliers_and_patterns['outliers'].keys():
         if threshold_level < list(col_outliers_and_patterns['outliers'].keys())[
             len(col_outliers_and_patterns['outliers'].keys()) // 2] and len(
@@ -737,6 +743,8 @@ def reset_global_values():
     global large_file
     global long_column_limit
     global large_file_threshold
+    global regex_only
+    global generalised_only
 
     memory_problems = False
     ndistinct_manually_set = False
@@ -744,6 +752,8 @@ def reset_global_values():
     large_file = False
     long_column_limit = 36
     large_file_threshold = 500000
+    regex_only = False
+    generalised_only = False
 
 
 def set_global_variables(manual_override_ndistinct):
@@ -755,13 +765,19 @@ def set_global_variables(manual_override_ndistinct):
 
 
 def process(file, manual_override_ndistinct=None, first_time=True, column_name=None, manual_override_long_column=None,
-            manual_override_large_file_threshold=None):
+            manual_override_large_file_threshold=None, regex_transformation_only=False,
+            generalised_transformation_only=False):
     global large_file_threshold
     if manual_override_large_file_threshold is not None:
         large_file_threshold = manual_override_large_file_threshold
     global long_column_limit
     if manual_override_long_column is not None:
         long_column_limit = manual_override_long_column
+    global regex_only
+    global generalised_only
+    regex_only = regex_transformation_only
+    generalised_only = generalised_transformation_only
+
     try:
         dataframe = read_data("resources/data_repository/" + file.filename, column_name)
     except AttributeError:

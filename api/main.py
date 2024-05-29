@@ -26,6 +26,16 @@ def upload_file():
         ndistinct_manual_set = request.form.get('number')
         long_column_cutoff = request.form.get('long_column_cutoff')
         large_file_threshold_input = request.form.get('largeFile_threshold_input')
+        regex_only = request.form.get('regex_transformation_only')
+        if regex_only is not None and regex_only != "":
+            regex_only = regex_only.lower() == "true"
+        else:
+            regex_only = False
+        generalised_only = request.form.get('generalised_transformation_only')
+        if generalised_only is not None and generalised_only != "":
+            generalised_only = generalised_only.lower() == "true"
+        else:
+            generalised_only = False
         if ndistinct_manual_set is not None and ndistinct_manual_set != "":
             ndistinct_manual_set = int(ndistinct_manual_set)
         else:
