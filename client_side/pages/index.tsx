@@ -20,6 +20,8 @@ function FileUploadForm() {
     const [error, setError] = useState('');
     const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
     const [isStillLoading, setIsStillLoading] = useState(false);
+    const [regexCheckBox, setRegexCheckbox] = useState(false);
+    const [generalisedCheckBox, setGeneralisedCheckBox] = useState(false);
 
     useEffect(() => {
         let timeout: NodeJS.Timeout | undefined;
@@ -67,6 +69,9 @@ function FileUploadForm() {
         const largeFile_threshold_input = largeFileThreshold.current?.value
         formData.append('largeFile_threshold_input', largeFile_threshold_input || '')
 
+        formData.append('regex_transformation_only', regexCheckBox.toString() || '');
+        formData.append('generalised_transformation_only', generalisedCheckBox.toString() || '');
+
         try {
             setIsLoading(true);
             const res = await fetch('http://localhost:5000/api/upload', {
@@ -89,6 +94,20 @@ function FileUploadForm() {
 
     const toggleAdvancedOptions = () => {
         setShowAdvancedOptions((prev) => !prev);
+    };
+
+    const handleCheckbox1Change = () => {
+        setRegexCheckbox(!regexCheckBox);
+        if (!regexCheckBox) {
+            setGeneralisedCheckBox(false);
+        }
+    };
+
+    const handleCheckbox2Change = () => {
+        setGeneralisedCheckBox(!generalisedCheckBox);
+        if (!generalisedCheckBox) {
+            setRegexCheckbox(false);
+        }
     };
 
     return (
@@ -117,6 +136,24 @@ function FileUploadForm() {
                                 <div style={{display: "flex", alignItems: "center"}}>
                                     <span style={{marginRight: "10px"}}>Specify above how many lines constitutes a large file:</span>
                                     <input type="number" ref={largeFileThreshold} placeholder="Enter a number"/>
+                                </div>
+                                <div style={{display: "flex", alignItems: "center"}}>
+                                    <label style={{marginRight: "10px"}}>
+                                        <input
+                                            type="checkbox"
+                                            checked={regexCheckBox}
+                                            onChange={handleCheckbox1Change}
+                                        />
+                                        Regex transformations only
+                                    </label>
+                                    <label style={{marginRight: "10px"}}>
+                                        <input
+                                            type="checkbox"
+                                            checked={generalisedCheckBox}
+                                            onChange={handleCheckbox2Change}
+                                        />
+                                        Generalised transformations only
+                                    </label>
                                 </div>
                             </div>
                         )}
