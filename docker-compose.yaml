@@ -7,7 +7,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    image: 'ghcr.io/thanostsiamis/fiona/api-service:latest'  # Update with your GitHub username and repo
+    image: 'ghcr.io/thanostsiamis/fiona/api-service:latest'  
     volumes:
       - './api:/usr/src/app'
     ports:
