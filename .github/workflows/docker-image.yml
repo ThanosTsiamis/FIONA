@@ -7,12 +7,24 @@ on:
     branches: [ "main" ]
 
 jobs:
-
-  build:
-
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Build the Docker image
-      run: docker compose build
+      - uses: actions/checkout@v3
+
+      # Log in to GitHub Container Registry
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build the Docker image
+      - name: Build the Docker image
+        run: docker build -t ghcr.io/ThanosTsiamis/your-image-name:latest .
+
+      # Push the Docker image to GitHub Container Registry
+      - name: Push the Docker image
+        run: docker push ghcr.io/ThanosTsiamis/your-image-name:latest
