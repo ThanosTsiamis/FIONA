@@ -9,7 +9,8 @@ import pandas as pd
 from anytree import Node
 from cachetools import cached, TTLCache
 from doubledouble import DoubleDouble
-from joblib import delayed, Parallel
+import psutil
+from joblib import Parallel, delayed
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -769,7 +770,12 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
             generalised_transformation_only=False):
     global large_file_threshold
     if manual_override_large_file_threshold is not None:
+        print("Manual override")
         large_file_threshold = manual_override_large_file_threshold
+        print(large_file_threshold)
+    else:
+        print("No manual override")
+        print(large_file_threshold)
     global long_column_limit
     if manual_override_long_column is not None:
         long_column_limit = manual_override_long_column
@@ -781,12 +787,13 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
     try:
         dataframe = read_data("resources/data_repository/" + file.filename, column_name)
     except AttributeError:
-        dataframe = read_data("resources/datasets/datasets_testing_purposes/toy/toyDirty.csv")
+        dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/flightsDirty.csv")
 
     if dataframe.shape[0] > large_file_threshold and first_time:  # if dataframe too large
         return list(dataframe.columns)
     if dataframe.shape[0] < large_file_threshold:
         with joblib.parallel_backend("loky"):
+            print("Using parallel processing")
             try:
                 if manual_override_ndistinct is not None:
                     set_global_variables(manual_override_ndistinct)
@@ -814,7 +821,6 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
         for column in dataframe.columns:
             single_column = dataframe[column]
             output.update(process_column(column, single_column)[0])
-        reset_global_values()
         return output
     output = {}
     error_columns = []
@@ -833,5 +839,4 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
             global memory_problems
             memory_problems = True
             output.update(add_outlying_elements_to_attribute(column, single_column))
-    reset_global_values()
     return output
