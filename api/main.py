@@ -55,6 +55,8 @@ def upload_file():
             # Handle the case when no number is provided
             large_file_threshold_input = None
 
+        # Measure the time taken to process the file
+        start_time = datetime.now()
         outlying_elements = process(f, ndistinct_manual_set, first_time=True,
                                     manual_override_long_column=long_column_cutoff,
                                     manual_override_large_file_threshold=large_file_threshold_input)
@@ -96,6 +98,10 @@ def upload_file():
             json_serialised = json.dumps(outlying_elements, indent=4)  # Specify indentation level
             with open("resources/json_dumps/" + f.filename + ".json", "w") as outfile:
                 outfile.write(json_serialised)
+        # Measure the time taken to process the file
+        end_time = datetime.now()
+        time_taken = end_time - start_time
+        logger.debug(f"Time taken to process the file: {time_taken}")
         redirection = redirect("http://localhost:3000/results")
         redirection.headers.add('Access-Control-Allow-Origin', '*')
         reset_global_values()

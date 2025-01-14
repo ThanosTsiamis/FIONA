@@ -49,7 +49,7 @@ def process_data(dataframe: pd.DataFrame):
     if type(dataframe) is pd.Series:
         dataframe = dataframe.to_frame()
     dataframe = dataframe.fillna('')
-    dataframe['GeneralisedUniqueElements'] = dataframe.applymap(generalise_string).applymap(find_unique_elements)
+    dataframe['GeneralisedUniqueElements'] = dataframe.map(generalise_string).map(find_unique_elements)
     return dataframe
 
 
