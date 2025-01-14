@@ -15,7 +15,7 @@ function Header() {
                     className="w-48 h-48 mr-2 "
                 />
             </div>
-            <h1 className="text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-1xl lg:text-5xl dark:text-white">
+            <h1 className="text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-1xl lg:text-5xl">
                 FIONA: Categorical Outlier Detector
             </h1>
         </header>
