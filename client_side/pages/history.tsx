@@ -30,26 +30,36 @@ const HistoryPage = () => {
     const [detailedView, setDetailedView] = useState<boolean>(false);
 
     useEffect(() => {
+        // Here we fetch the history data from the server. But the server sometimes may be down. Display an appropriate message to the user.
         const fetchHistoryData = async () => {
-            const response = await fetch('http://localhost:5000/api/history');
-            const jsonData = await response.json();
-            setHistoryData(jsonData);
+            try {
+                const response = await fetch('http://localhost:5000/api/history');
+                const jsonData = await response.json();
+                setHistoryData(jsonData);
+            } catch (e) {
+                console.error(e);
+                alert("Error fetching history from server. Are you sure server is running?");
+            }
         };
-
-        fetchHistoryData();
+        fetchHistoryData().then(r => r);
     }, []);
 
     useEffect(() => {
         const fetchResultsData = async () => {
-            const response = await fetch(`http://localhost:5000/api/fetch/${selectedFile}`);
-            const jsonData = await response.json();
-            setResultsData(jsonData);
-            setHeaders(Object.keys(jsonData));
-            setSelectedKey(Object.keys(jsonData)[0]); // Select first outer key by default
+            try {
+                const response = await fetch(`http://localhost:5000/api/fetch/${selectedFile}`);
+                const jsonData = await response.json();
+                setResultsData(jsonData);
+                setHeaders(Object.keys(jsonData));
+                setSelectedKey(Object.keys(jsonData)[0]); // Select first outer key by default
+            } catch (e) {
+                console.error(e);
+                alert("Error fetching results from server. Are you sure server is running?");
+            }
         };
 
         if (selectedFile) {
-            fetchResultsData();
+            fetchResultsData().then(r => r);
         }
     }, [selectedFile]);
 

@@ -7,12 +7,13 @@ from cachetools import cached, TTLCache
 from flask import Flask, request, jsonify, redirect, Response
 
 from algorithm import process, logger
+from api.algorithm import reset_global_values
 
 app = Flask("FIONA")
 
 
 @app.errorhandler(500)
-def internal_server_error():
+def internal_server_error(error):
     redirection = redirect("http://localhost:3000/error")
     redirection.headers.add('Access-Control-Allow-Origin', '*')
     return redirection
@@ -54,6 +55,8 @@ def upload_file():
             # Handle the case when no number is provided
             large_file_threshold_input = None
 
+        # Measure the time taken to process the file
+        start_time = datetime.now()
         outlying_elements = process(f, ndistinct_manual_set, first_time=True,
                                     manual_override_long_column=long_column_cutoff,
                                     manual_override_large_file_threshold=large_file_threshold_input)
@@ -95,8 +98,13 @@ def upload_file():
             json_serialised = json.dumps(outlying_elements, indent=4)  # Specify indentation level
             with open("resources/json_dumps/" + f.filename + ".json", "w") as outfile:
                 outfile.write(json_serialised)
+        # Measure the time taken to process the file
+        end_time = datetime.now()
+        time_taken = end_time - start_time
+        logger.debug(f"Time taken to process the file: {time_taken}")
         redirection = redirect("http://localhost:3000/results")
         redirection.headers.add('Access-Control-Allow-Origin', '*')
+        reset_global_values()
         return redirection
 
 
@@ -133,3 +141,9 @@ if __name__ == "__main__":
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     logger.debug(f'The current time is: {current_time}')
     app.run(host="0.0.0.0", debug=False)
+    # outlying_elements = process("datasets_testing_purposes/flights/flightsDirty.csv", first_time=True,
+    #                             manual_override_long_column=None,
+    #                             manual_override_large_file_threshold=2)
+    #
+    # if isinstance(outlying_elements, list):
+    #     outlying_elements=process("datasets_testing_purposes/flights/flightsDirty.csv", first_time=False, column_name=outlying_elements[0])

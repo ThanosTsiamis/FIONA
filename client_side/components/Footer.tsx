@@ -9,10 +9,12 @@ function Footer() {
                     <div className="mb-6 md:mb-0">
                         <h5 className="mb-2 font-medium uppercase">About</h5>
                         <p className="mb-4">
-                            Fiona is the result of Thanos Tsiamis&apos; master thesis, developed under the
+                            Fiona started as Thanos Tsiamis&apos; master thesis, developed under the
                             supervision of
                             Dr. A.A.A.
-                            (Hakim) Qahtan for Utrecht University during the academic year 2022-2023.
+                            (Hakim) Qahtan for Utrecht University during the academic year 2022-2023 but it
+                            developed into a full-fledged project. For more information, please visit the
+                            repository.
                         </p>
                     </div>
 
@@ -24,13 +26,6 @@ function Footer() {
                                     <a href="https://github.com/ThanosTsiamis/FIONA"
                                        className="text-neutral-800 dark:text-neutral-200 hover:text-blue-800">
                                         Github Repository
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="" className="text-neutral-800 dark:text-neutral-200">
-                                        <Tooltip title="Coming soon!">
-                                            <span>Master Thesis Paper</span>
-                                        </Tooltip>
                                     </a>
                                 </li>
                             </ul>
@@ -56,10 +51,9 @@ function Footer() {
             </div>
             <div
                 className="bg-neutral-200 p-1 text-center text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
-                Developed at: &nbsp;
-                <a className="text-neutral-800 dark:text-neutral-400 hover:text-blue-800" href="https://www.uu.nl/en/">
-                    Utrecht University
-                </a>
+                <p className="mb-0">
+                    &copy; {new Date().getFullYear()} Fiona. All rights reserved.
+                </p>
             </div>
         </footer>
     );
