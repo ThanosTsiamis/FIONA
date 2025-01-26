@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout code
@@ -28,6 +31,3 @@ jobs:
         run: |
           docker compose build
           docker compose push
-          permissions:
-            contents: read
-            packages: write
