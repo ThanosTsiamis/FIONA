@@ -35,7 +35,7 @@
     "@types/react-router-dom": "5.1.7",
     "@types/react-table": "^7.7.14",
     "autoprefixer": "^10.4.7",
-    "axios": "^1.7.4",
+    "axios": "^1.8.2",
     "chartjs-plugin-zoom": "^2.0.1",
     "eslint": "8.16.0",
     "eslint-config-next": "^14.1.4",
