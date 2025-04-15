@@ -12,6 +12,14 @@ type Data = {
     };
 };
 
+const escapeMap: Record<string, string> = {
+    U: "\\U",
+    l: "\\l",
+    s: "\\s",
+    w: "\\w",
+    d: "\\d"
+};
+
 const PatternsTable: React.FC<{ resultsData: Data, selectedKey: string }> = ({resultsData, selectedKey}) => {
     const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
