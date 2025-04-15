@@ -79,7 +79,7 @@ const PatternsTable: React.FC<{ resultsData: Data, selectedKey: string }> = ({re
                                                 <td style={{
                                                     border: '1px solid black',
                                                     textAlign: 'center'
-                                                }}>{pattern}</td>
+                                                }}>{pattern.replaceAll("U","\\U").replaceAll("l","\\l").replaceAll("s","\\s").replaceAll("w","\\w").replaceAll("d","\\d")}</td>
                                                 <td style={{
                                                     border: '1px solid black',
                                                     textAlign: 'center'
