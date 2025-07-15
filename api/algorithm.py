@@ -46,10 +46,11 @@ def read_data(filename, column_name=None):
 
 
 def process_data(dataframe: pd.DataFrame):
-    if type(dataframe) is pd.Series:
+    if isinstance(dataframe, pd.Series):
         dataframe = dataframe.to_frame()
     dataframe = dataframe.fillna('')
-    dataframe['GeneralisedUniqueElements'] = dataframe.map(generalise_string).map(find_unique_elements)
+    column_name = dataframe.columns[0]
+    dataframe['GeneralisedUniqueElements'] = dataframe[column_name].map(generalise_string).map(find_unique_elements)
     return dataframe
 
 

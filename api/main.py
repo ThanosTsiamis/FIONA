@@ -6,8 +6,7 @@ import ujson as ujson
 from cachetools import cached, TTLCache
 from flask import Flask, request, jsonify, redirect, Response
 
-from algorithm import process, logger
-from api.algorithm import reset_global_values
+from algorithm import process, logger, reset_global_values
 
 app = Flask("FIONA")
 
