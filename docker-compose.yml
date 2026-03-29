@@ -1,0 +1,49 @@
+networks:
+  app-network:
+
+services:
+  api-service:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    volumes:
+      - ./api:/usr/src/app/api
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_CONFIG=development
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:5000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - app-network
+
+  client-service:
+    build:
+      context: ./client_side
+      dockerfile: Dockerfile
+      target: dev
+    volumes:
+      - ./client_side:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:5000
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      api-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000', (res) => process.exit(res.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    networks:
+      - app-network

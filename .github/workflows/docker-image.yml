@@ -3,8 +3,7 @@ name: Docker Image CI
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -29,5 +28,5 @@ jobs:
 
       - name: Build and Push the Docker images
         run: |
-          docker compose build
-          docker compose push
+          docker compose -f docker-compose.prod.yml build
+          docker compose -f docker-compose.prod.yml push

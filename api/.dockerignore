@@ -1,3 +1,8 @@
-resources/
-
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
 .git/
+.idea/
+resources/data_repository/
+resources/json_dumps/

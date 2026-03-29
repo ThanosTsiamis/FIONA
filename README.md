@@ -10,7 +10,7 @@ languages, making it a powerful and accessible tool for outlier detection in div
 
 FIONA is the Master's Thesis of Thanos Tsiamis
 at Utrecht University for the program of Computing Science. It was developed under
-the supervision of Dr. A.A.A. (Hakim) Qahtan for the academic year of 2022 - 2023.
+the supervision of Dr. A.A.A. (Hakim) Qahtan for the academic year of 2022 - 2023. 
 
 ## How to run
 
@@ -24,13 +24,9 @@ There are 2 ways to run the project: (i) [Locally](#local-execution) and (ii) in
 
 For the **front end**:
 
-One-liner in terminal: `cd .\client_side\ & npm install & npm run dev`
+One-liner in terminal: `cd client_side && npm install && npm run dev`
 
-Note: The above command may not work on Windows. In that case, swap the ampersands for semicolons:
-
-Step by step:
-
-
+On Windows, use semicolons if needed.
 
 - Open a terminal and cd to the `client_side` folder
 - Run the command `npm install`
@@ -38,16 +34,29 @@ Step by step:
 
 For the **back end**:
 
-One-liner in terminal `cd api & pip install -r requirements.txt & python main.py`
+One-liner in terminal: `pip install -r api/requirements.txt && python -m api.main`
 
-As before in case the above command doesn't work `cd api ; pip install
--r requirements.txt ; python main.py`
+- Open a second terminal and stay in the project root
+- Install the necessary requirements from `api/requirements.txt`
+- Run the command `python -m api.main`
 
-Step by step:
+The frontend runs on [http://localhost:3000](http://localhost:3000) and the backend runs on [http://localhost:5000](http://localhost:5000).
 
-- Open a second terminal and cd to the api folder
-- Install the necessary requirements in `requirements.txt` file
-- Run the command `python main.py`
+### Running tests
+
+From the project root, run:
+
+- `python3 -m unittest discover -s tests -v`
+- `npm --prefix client_side test`
+- `npm --prefix client_side run lint`
+
+Or use the root package helper:
+
+- `npm run test:api`
+- `npm run test:frontend`
+- `npm run lint:frontend`
+
+These tests currently cover API helper logic, route-level upload/fetch/history flows, Flask integration coverage when backend dependencies are installed, dataset-based regression checks, and frontend page behavior.
 
 ### Docker
 
@@ -58,16 +67,20 @@ install it [here](https://docs.docker.com/get-docker/).
 
 - Open a terminal or command prompt.
 
-- Run the following command to start the Docker containers: `docker compose up`
+- For local development with bind mounts and live code changes, run:
+  `docker compose up --build`
+- For a more production-like run that uses the production Compose file and the production frontend image target, run:
+  `docker compose -f docker-compose.prod.yml up --build`
 
 Please make sure that approximately 2GB of storage are available for the 2 docker containers.
+
+The default [docker-compose.yml](/Users/thanostsiamis/PycharmProjects/FIONA/docker-compose.yml) is now development-focused and always builds from local source. The production-style setup lives in [docker-compose.prod.yml](/Users/thanostsiamis/PycharmProjects/FIONA/docker-compose.prod.yml).
+Container health checks are enabled for both services. The API health endpoint is available at [http://localhost:5000/api/health](http://localhost:5000/api/health).
 
 ## How to use
 
 After the system is up and running, head to [http://localhost:3000](http://localhost:3000) and upload the file you want
 outliers to be detected in the corresponding form.
-
-Note: Back-end resides at [http://localhost:5000](http://localhost:5000).
 
 ## Note
 

@@ -7,6 +7,7 @@ import ToggleSwitch from "../components/ToggleSwitch";
 import BriefSection from "../components/BriefSection";
 import InfoBox from "../components/InfoBox";
 import PageButton from "../components/PageButton";
+import {ApiError, fetchJson} from "../lib/api";
 
 type Data = {
     [key: string]: {
@@ -24,24 +25,41 @@ const ResultsPage = () => {
     const [headers, setHeaders] = useState<string[]>([]);
     const [selectedKey, setSelectedKey] = useState<string>('');
     const [detailedView, setDetailedView] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
-            const response = await fetch(`http://localhost:5000/api/fetch/${filename}`);
-            const jsonData = await response.json();
-            setData(jsonData);
-            setHeaders(Object.keys(jsonData));
-            setSelectedKey(Object.keys(jsonData)[0]); // Select first outer key by default
+            try {
+                setIsLoading(true);
+                setError('');
+                const jsonData = await fetchJson<Data>(`/api/fetch/${filename}`);
+                const nextHeaders = Object.keys(jsonData);
+                setData(jsonData);
+                setHeaders(nextHeaders);
+                setSelectedKey(nextHeaders[0] || '');
+            } catch (err) {
+                if (err instanceof ApiError) {
+                    setError(err.message);
+                } else {
+                    setError('Unable to load results. Please try again.');
+                }
+            } finally {
+                setIsLoading(false);
+            }
         };
 
         if (filename) {
-            fetchData();
+            fetchData().then(r => r);
         }
     }, [filename]);
 
     return (
         <div>
             <PageButton href={"/"} label={"Main Page"} icon={"🏠"} iconLabel={"home"}></PageButton>
+            {!filename && <p className="p-4 text-gray-600">No uploaded file is selected yet.</p>}
+            {isLoading && <p className="p-4 text-gray-600">Loading results...</p>}
+            {error && <p className="p-4 text-red-500">{error}</p>}
             <Tabs
                 value={selectedKey}
                 onChange={(e, newValue) => setSelectedKey(newValue)}
@@ -53,13 +71,13 @@ const ResultsPage = () => {
                     <Tab key={headerKey} value={headerKey} label={headerKey}/>
                 ))}
             </Tabs>
-            <ToggleSwitch onChange={(checked) => setDetailedView(checked)}/>
-            {detailedView ? (
+            {headers.length > 0 && <ToggleSwitch onChange={(checked) => setDetailedView(checked)}/>}
+            {headers.length > 0 && detailedView ? (
                 <>
                     <OutliersTable resultsData={data} selectedKey={selectedKey}/>
                     <PatternsTable resultsData={data} selectedKey={selectedKey}/>
                 </>
-            ) : (
+            ) : headers.length > 0 ? (
                 data[selectedKey] ? (
                     <>
                         <BriefSection data={{[selectedKey]: {outliers: data[selectedKey]}}}
@@ -68,7 +86,7 @@ const ResultsPage = () => {
                             message={"This bar chart orders bars from left to right to show certainty of outliers: the leftmost bar is the most significant outlier, and each subsequent bar to the right is less so."}/>
                     </>
                 ) : null
-            )}
+            ) : null}
         </div>
     );
 };

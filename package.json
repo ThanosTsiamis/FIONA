@@ -1,4 +1,11 @@
 {
+  "private": true,
+  "scripts": {
+    "test:api": "python3 -m unittest discover -s tests -v",
+    "test:frontend": "npm --prefix client_side test",
+    "typecheck:frontend": "npm --prefix client_side run typecheck",
+    "lint:frontend": "npm --prefix client_side run lint"
+  },
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",

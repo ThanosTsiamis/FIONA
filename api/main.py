@@ -1,148 +1,108 @@
-import json
 import os
 from datetime import datetime
 
-import ujson as ujson
-from cachetools import cached, TTLCache
-from flask import Flask, request, jsonify, redirect, Response
+import ujson
+from cachetools import TTLCache, cached
+from flask import Flask, Response, current_app, jsonify, redirect, request
 
-from algorithm import process, logger, reset_global_values
+try:
+    from .algorithm import logger, process
+    from .services.storage import list_json_files, read_json_output
+    from .services.upload_service import UploadValidationError, process_upload
+except ImportError:  # pragma: no cover - local fallback for direct execution/tests
+    from algorithm import logger, process
+    from services.storage import list_json_files, read_json_output
+    from services.upload_service import UploadValidationError, process_upload
 
-app = Flask("FIONA")
+
+DEFAULT_CONFIG = {
+    "DATA_REPOSITORY_DIR": os.path.join("resources", "data_repository"),
+    "JSON_DUMPS_DIR": os.path.join("resources", "json_dumps"),
+    "FRONTEND_BASE_URL": "http://localhost:3000",
+}
 
 
-@app.errorhandler(500)
+def add_cors_headers(response):
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response
+
+
+def json_response(payload, status_code):
+    response = Response(ujson.dumps(payload), content_type="application/json")
+    response.status_code = status_code
+    return add_cors_headers(response)
+
+
+def build_results_redirect():
+    return add_cors_headers(redirect(f"{current_app.config['FRONTEND_BASE_URL']}/results"))
+
+
 def internal_server_error(error):
-    redirection = redirect("http://localhost:3000/error")
-    redirection.headers.add('Access-Control-Allow-Origin', '*')
-    return redirection
+    return add_cors_headers(redirect(f"{current_app.config['FRONTEND_BASE_URL']}/error"))
 
 
-@app.route('/api/upload', methods=['POST'])
 def upload_file():
-    if request.method == 'POST':
-        f = request.files['file']
-        f.save("resources/data_repository/" + f.filename)
-        ndistinct_manual_set = request.form.get('number')
-        long_column_cutoff = request.form.get('long_column_cutoff')
-        large_file_threshold_input = request.form.get('largeFile_threshold_input')
-        regex_only = request.form.get('regex_transformation_only')
-        if regex_only is not None and regex_only != "":
-            regex_only = regex_only.lower() == "true"
-        else:
-            regex_only = False
-        generalised_only = request.form.get('generalised_transformation_only')
-        if generalised_only is not None and generalised_only != "":
-            generalised_only = generalised_only.lower() == "true"
-        else:
-            generalised_only = False
-        if ndistinct_manual_set is not None and ndistinct_manual_set != "":
-            ndistinct_manual_set = int(ndistinct_manual_set)
-        else:
-            # Handle the case when no number is provided
-            ndistinct_manual_set = None
+    if request.method != "POST":
+        return json_response({"error": "Method not allowed."}, 405)
 
-        if long_column_cutoff is not None and long_column_cutoff != "":
-            long_column_cutoff = int(long_column_cutoff)
-        else:
-            # Handle the case when no number is provided
-            long_column_cutoff = None
+    file_storage = request.files.get("file")
+    try:
+        process_upload(
+            file_storage,
+            request.form,
+            processor=current_app.config["PROCESSOR"],
+            logger=current_app.config["LOGGER"],
+            data_repository_dir=current_app.config["DATA_REPOSITORY_DIR"],
+            json_dumps_dir=current_app.config["JSON_DUMPS_DIR"],
+        )
+    except UploadValidationError as error:
+        return json_response({"error": str(error)}, 400)
 
-        if large_file_threshold_input is not None and large_file_threshold_input != "":
-            large_file_threshold_input = int(large_file_threshold_input)
-        else:
-            # Handle the case when no number is provided
-            large_file_threshold_input = None
+    return build_results_redirect()
 
-        # Measure the time taken to process the file
-        start_time = datetime.now()
-        outlying_elements = process(f, ndistinct_manual_set, first_time=True,
-                                    manual_override_long_column=long_column_cutoff,
-                                    manual_override_large_file_threshold=large_file_threshold_input)
-        if isinstance(outlying_elements, list):
-            columns = outlying_elements
-            for column in columns:
-                outlying_elements = process(f, ndistinct_manual_set, first_time=False, column_name=column)
-                json_serialised = json.dumps(outlying_elements, indent=4)  # Specify indentation level
-                basepath = f"resources/json_dumps/multipart_file/{f.filename}/"
-                directory = os.path.dirname(basepath)
-                os.makedirs(directory, exist_ok=True)
-                with open(basepath + column + ".json", "w") as outfile:
-                    outfile.write(json_serialised)
 
-            # merge and delete here
-            folder_path = "resources/json_dumps/multipart_file"
-            output_dir = os.path.dirname(folder_path)
-
-            for root, dirs, files in os.walk(folder_path):
-                if root != folder_path:
-                    merged_data = {}
-                    for filename in files:
-                        if filename.endswith(".json"):
-                            file_path = os.path.join(root, filename)
-                            with open(file_path, "r") as file:
-                                json_data = json.load(file)
-                                merged_data.update(json_data)
-
-                    subdir_name = os.path.basename(root)
-                    merged_json = json.dumps(merged_data, indent=4)  # Specify indentation level
-
-                    output_file = os.path.join(output_dir, subdir_name + ".json")
-                    with open(output_file, "w") as file:
-                        file.write(merged_json)
-
-                    # Remove the subdirectory
-                    # shutil.rmtree(root)
-        else:
-            json_serialised = json.dumps(outlying_elements, indent=4)  # Specify indentation level
-            with open("resources/json_dumps/" + f.filename + ".json", "w") as outfile:
-                outfile.write(json_serialised)
-        # Measure the time taken to process the file
-        end_time = datetime.now()
-        time_taken = end_time - start_time
-        logger.debug(f"Time taken to process the file: {time_taken}")
-        redirection = redirect("http://localhost:3000/results")
-        redirection.headers.add('Access-Control-Allow-Origin', '*')
-        reset_global_values()
-        return redirection
+def health():
+    return json_response({"status": "ok"}, 200)
 
 
 @cached(cache=TTLCache(maxsize=1, ttl=60))
-@app.route("/api/fetch/<string:filename>", methods=['GET'])
 def fetch(filename):
-    file_path = os.path.join("resources/json_dumps", filename)
+    try:
+        data = read_json_output(filename, current_app.config["JSON_DUMPS_DIR"])
+    except FileNotFoundError:
+        return json_response({"error": f"File '{filename}' was not found."}, 404)
 
-    if not filename.endswith(".json"):
-        file_path += ".json"
-
-    with open(file_path) as f:
-        data = ujson.load(f)
-
-    response = Response(ujson.dumps(data), content_type='application/json')
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    logger.debug("Response sent")
-    return response
+    response = Response(ujson.dumps(data), content_type="application/json")
+    current_app.config["LOGGER"].debug("Response sent")
+    return add_cors_headers(response)
 
 
 @cached(cache=TTLCache(maxsize=1, ttl=180))
-@app.route("/api/history", methods=['GET'])
 def get_json_files():
-    json_files = []
-    for file in os.listdir('resources/json_dumps'):
-        if file.endswith('.json'):
-            json_files.append(file)
-    response = jsonify(json_files)
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    return response
+    response = jsonify(list_json_files(current_app.config["JSON_DUMPS_DIR"]))
+    return add_cors_headers(response)
+
+
+def create_app(test_config=None, *, processor=process, app_logger=logger):
+    app = Flask("FIONA")
+    app.config.update(DEFAULT_CONFIG)
+    if test_config:
+        app.config.update(test_config)
+    app.config["PROCESSOR"] = processor
+    app.config["LOGGER"] = app_logger
+
+    app.errorhandler(500)(internal_server_error)
+    app.route("/api/upload", methods=["POST"])(upload_file)
+    app.route("/api/health", methods=["GET"])(health)
+    app.route("/api/fetch/<string:filename>", methods=["GET"])(fetch)
+    app.route("/api/history", methods=["GET"])(get_json_files)
+    return app
+
+
+app = create_app()
 
 
 if __name__ == "__main__":
-    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    logger.debug(f'The current time is: {current_time}')
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    logger.debug(f"The current time is: {current_time}")
     app.run(host="0.0.0.0", debug=False)
-    # outlying_elements = process("datasets_testing_purposes/flights/flightsDirty.csv", first_time=True,
-    #                             manual_override_long_column=None,
-    #                             manual_override_large_file_threshold=2)
-    #
-    # if isinstance(outlying_elements, list):
-    #     outlying_elements=process("datasets_testing_purposes/flights/flightsDirty.csv", first_time=False, column_name=outlying_elements[0])

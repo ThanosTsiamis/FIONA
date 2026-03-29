@@ -7,6 +7,22 @@ import FancyTable from "../components/FancyTable";
 import Header from "../components/Header";
 import CircularProgress from '@mui/material/CircularProgress';
 import PageButton from "../components/PageButton";
+import {ApiError, uploadDataset} from "../lib/api";
+
+const PREVIEW_SIZE_LIMIT_MB = 1;
+const SUPPORTED_FILE_EXTENSIONS = ['csv', 'xlsx', 'json', 'tsv'];
+
+function getFileExtension(filename: string) {
+    return filename.split('.').pop()?.toLowerCase() || '';
+}
+
+function isPositiveInteger(value: string) {
+    if (!value) {
+        return true;
+    }
+
+    return /^\d+$/.test(value) && Number(value) > 0;
+}
 
 function FileUploadForm() {
     const {setFilename} = useContext(UploadContext);
@@ -36,13 +52,27 @@ function FileUploadForm() {
     const handleFileChange = () => {
         const file = fileInput.current?.files?.[0];
         if (!file) {
+            setCsvData([]);
             return;
         }
-        const fileSizeInMb = file.size / (1024 * 1024);
-        const maxFileSizeInMb = 1;
 
-        if (fileSizeInMb > maxFileSizeInMb) {
+        setError('');
+        const fileExtension = getFileExtension(file.name);
+        if (!SUPPORTED_FILE_EXTENSIONS.includes(fileExtension)) {
+            setCsvData([]);
+            setError('Unsupported file type. Please upload a CSV, XLSX, JSON, or TSV file.');
+            return;
+        }
+
+        const fileSizeInMb = file.size / (1024 * 1024);
+        if (fileSizeInMb > PREVIEW_SIZE_LIMIT_MB) {
+            setCsvData([]);
             setError('File is too large to be previewed on screen and will slow down your computer');
+            return;
+        }
+
+        if (fileExtension !== 'csv' && fileExtension !== 'tsv') {
+            setCsvData([]);
             return;
         }
 
@@ -51,42 +81,65 @@ function FileUploadForm() {
                 const data = result.data as string[][];
                 setCsvData(data);
             },
+            error: () => {
+                setCsvData([]);
+                setError('Unable to preview the selected file.');
+            }
         });
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const formData = new FormData();
         const file = fileInput.current?.files?.[0];
         if (!file) {
+            setError('Please choose a file before running the algorithm.');
             return;
         }
+
+        const number = numberInput.current?.value || '';
+        const long_column_cutoff = longColumnCutoffInput.current?.value || '';
+        const largeFile_threshold_input = largeFileThreshold.current?.value || '';
+
+        if (!isPositiveInteger(number)) {
+            setError('The ndistinct number must be a positive integer.');
+            return;
+        }
+
+        if (!isPositiveInteger(long_column_cutoff)) {
+            setError('The long column cutoff must be a positive integer.');
+            return;
+        }
+
+        if (!isPositiveInteger(largeFile_threshold_input)) {
+            setError('The large file threshold must be a positive integer.');
+            return;
+        }
+
+        const formData = new FormData();
         formData.append('file', file);
-        const number = numberInput.current?.value;
-        formData.append('number', number || '');
-        const long_column_cutoff = longColumnCutoffInput.current?.value
-        formData.append('long_column_cutoff', long_column_cutoff || '')
-        const largeFile_threshold_input = largeFileThreshold.current?.value
-        formData.append('largeFile_threshold_input', largeFile_threshold_input || '')
+        formData.append('number', number);
+        formData.append('long_column_cutoff', long_column_cutoff);
+        formData.append('largeFile_threshold_input', largeFile_threshold_input);
 
         formData.append('regex_transformation_only', regexCheckBox.toString() || '');
         formData.append('generalised_transformation_only', generalisedCheckBox.toString() || '');
 
         try {
+            setError('');
             setIsLoading(true);
-            const res = await fetch('http://localhost:5000/api/upload', {
-                method: 'POST',
-                body: formData,
-                redirect: 'follow',
-            });
+            const res = await uploadDataset(formData);
             setFilename(file.name);
             if (res.redirected) {
                 router.push(res.url);
             } else {
-                const data = await res.json();
+                router.push('/results');
             }
         } catch (err) {
-            console.error(err);
+            if (err instanceof ApiError) {
+                setError(err.message);
+            } else {
+                setError('The upload failed. Please check that the backend is running and try again.');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -120,7 +173,12 @@ function FileUploadForm() {
             <div className="flex flex-col items-center justify-center">
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
-                        <input type="file" ref={fileInput} onChange={handleFileChange}/>
+                        <input
+                            type="file"
+                            ref={fileInput}
+                            onChange={handleFileChange}
+                            accept=".csv,.xlsx,.json,.tsv"
+                        />
                     </div>
                     <div className="mb-4">
                         {showAdvancedOptions && (

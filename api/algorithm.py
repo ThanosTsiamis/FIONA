@@ -1,5 +1,6 @@
 import gc
 import logging
+from dataclasses import dataclass
 from datetime import datetime
 
 import chardet
@@ -14,14 +15,31 @@ from joblib import Parallel, delayed
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-memory_problems = False
-ndistinct_manually_set = False
-ndistinct_manual_setting = 2
-large_file = False
-long_column_limit = 36  # This is based on the length of a UUID
-large_file_threshold = 500000
-regex_only = False
-generalised_only = False
+
+
+@dataclass(frozen=True)
+class AlgorithmConfig:
+    ndistinct_manual_setting: int | None = None
+    long_column_limit: int = 36
+    large_file_threshold: int = 500000
+    regex_only: bool = False
+    generalised_only: bool = False
+
+
+def build_algorithm_config(
+    manual_override_ndistinct=None,
+    manual_override_long_column=None,
+    manual_override_large_file_threshold=None,
+    regex_transformation_only=False,
+    generalised_transformation_only=False,
+):
+    return AlgorithmConfig(
+        ndistinct_manual_setting=manual_override_ndistinct,
+        long_column_limit=manual_override_long_column or 36,
+        large_file_threshold=manual_override_large_file_threshold or 500000,
+        regex_only=regex_transformation_only,
+        generalised_only=generalised_transformation_only,
+    )
 
 
 def read_data(filename, column_name=None):
@@ -113,8 +131,8 @@ def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
         return set(word_split(df[:, 0]))
 
 
-@cached(cache=TTLCache(maxsize=1, ttl=600))
-def calculate_machine_limit(dataset_size: int):
+@cached(cache=TTLCache(maxsize=16, ttl=600))
+def calculate_machine_limit(dataset_size: int, memory_problems: bool = False):
     """
     Find the maximum size of an empty NumPy matrix that can be created without causing a memory overflow.
     :return: the maximum size of the matrix.
@@ -137,7 +155,7 @@ def calculate_machine_limit(dataset_size: int):
             return i - 1000
 
 
-def tree_grow(column: pd.DataFrame, nDistinctMin=2):
+def tree_grow(column: pd.DataFrame, config: AlgorithmConfig, nDistinctMin=2, memory_problems: bool = False):
     """
         The tree grow algorithm. It works by adding nodes in the list and popping the head each time in order to split
         it. Initially the tree contains only the root. The split doesn't happen if the unique elements inside the node
@@ -149,8 +167,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     """
     root = Node(" ", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
-    global long_column_limit
-    limit = calculate_machine_limit(column.shape[0])
+    limit = calculate_machine_limit(column.shape[0], memory_problems=memory_problems)
     while node_list:
         current_node = node_list.pop(0)
         child_list = []
@@ -165,7 +182,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                     if children_identifiers[0] == {'d'} or children_identifiers[0] == {'d', 's'}:
                         # TODO:Fix the latter case e.g. sddssdds
                         continue
-        if current_node.specificity_level == 0 and len(current_node.data[0, 0]) > long_column_limit:
+        if current_node.specificity_level == 0 and len(current_node.data[0, 0]) > config.long_column_limit:
             continue
         if len(children_identifiers) == 1 and current_node.specificity_level == len(str(current_node.data[0, 0])):
             continue
@@ -182,11 +199,11 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                 data_for_child = current_node.data[positions]
             elif current_node.specificity_level == -1:
                 length = np.vectorize(len)
-                if item <= long_column_limit:
+                if item <= config.long_column_limit:
                     positions = np.nonzero(np.isin(length(current_node.data[:, 0]), item))
                     data_for_child = current_node.data[positions]
                 else:
-                    positions = np.where(length(current_node.data[:, 0]) > long_column_limit)
+                    positions = np.where(length(current_node.data[:, 0]) > config.long_column_limit)
                     data_for_child = current_node.data[positions]
                     breaking_flag = True
             else:
@@ -340,17 +357,24 @@ def median_vector_can_fit(score_matrix):
         return False
 
 
-def process_attribute(dataframe: pd.DataFrame):
-    global ndistinct_manually_set
+def process_attribute(
+    dataframe: pd.DataFrame,
+    config: AlgorithmConfig,
+    *,
+    large_file: bool = False,
+    memory_problems: bool = False,
+):
     attribute = process_data(dataframe)
-    if not ndistinct_manually_set:
-        root = tree_grow(attribute)
+    fibonacci = fibonacci_generator()
+    tries = 0
+    manual_ndistinct = config.ndistinct_manual_setting is not None
+
+    if not manual_ndistinct:
+        root = tree_grow(attribute, config=config, memory_problems=memory_problems)
         ndistinct = 2
-        fibonacci = fibonacci_generator()
-        tries = 0  # failsafe mechanism
         while True or tries < 40:
             leaves = root.leaves
-            if len(leaves) < calculate_machine_limit(dataset_size=dataframe.shape[0]):
+            if len(leaves) < calculate_machine_limit(dataset_size=dataframe.shape[0], memory_problems=memory_problems):
                 break
             else:
                 # if the file is large then going to the next fibonacci won't do much.
@@ -361,11 +385,16 @@ def process_attribute(dataframe: pd.DataFrame):
                     ndistinct = next(fibonacci)
                     ndistinct = next(fibonacci)
                 ndistinct = next(fibonacci)
-                root = tree_grow(attribute, nDistinctMin=ndistinct)
+                root = tree_grow(attribute, config=config, nDistinctMin=ndistinct, memory_problems=memory_problems)
                 tries += 1
 
     else:
-        root = tree_grow(attribute, nDistinctMin=ndistinct_manual_setting)
+        root = tree_grow(
+            attribute,
+            config=config,
+            nDistinctMin=config.ndistinct_manual_setting,
+            memory_problems=memory_problems,
+        )
         leaves = root.leaves
 
     score_matrix = score_function(leaves)
@@ -373,7 +402,7 @@ def process_attribute(dataframe: pd.DataFrame):
         medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
     except:
         ndistinct = next(fibonacci)
-        root = tree_grow(attribute, nDistinctMin=ndistinct)
+        root = tree_grow(attribute, config=config, nDistinctMin=ndistinct, memory_problems=memory_problems)
         leaves = root.leaves
         score_matrix = score_function(leaves)
         while not median_vector_can_fit(score_matrix):
@@ -383,7 +412,7 @@ def process_attribute(dataframe: pd.DataFrame):
             ndistinct = next(fibonacci)
             ndistinct = next(fibonacci)
             ndistinct = next(fibonacci)
-            root = tree_grow(attribute, nDistinctMin=ndistinct)
+            root = tree_grow(attribute, config=config, nDistinctMin=ndistinct, memory_problems=memory_problems)
             leaves = root.leaves
             score_matrix = score_function(leaves)
             tries += 1
@@ -554,8 +583,20 @@ def convert_to_percentage(data, number):
         return data
 
 
-def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.DataFrame):
-    col_outliers_and_patterns = process_attribute(dataframe_column)
+def add_outlying_elements_to_attribute(
+    column_name: str,
+    dataframe_column: pd.DataFrame,
+    config: AlgorithmConfig,
+    *,
+    large_file: bool = False,
+    memory_problems: bool = False,
+):
+    col_outliers_and_patterns = process_attribute(
+        dataframe_column,
+        config,
+        large_file=large_file,
+        memory_problems=memory_problems,
+    )
     lexicon = {column_name: {'outliers': {}, 'patterns': {}}}
     has_previous_threshold_dict = False
     previous_threshold_dict_value = -1
@@ -625,9 +666,9 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
     apply_generalised_comparison = True
     if avg_regex_ratio > avg_generalised_ratio and avg_regex_ratio < 0.98 and avg_regex_ratio > 0.42:
         apply_generalised_comparison = False
-    if regex_only:
+    if config.regex_only:
         apply_generalised_comparison = False
-    if generalised_only:
+    if config.generalised_only:
         apply_generalised_comparison = True
     for threshold_level in col_outliers_and_patterns['outliers'].keys():
         if threshold_level < list(col_outliers_and_patterns['outliers'].keys())[
@@ -727,102 +768,61 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
     return lexicon
 
 
-def process_column(column_name, single_column):
+def process_column(column_name, single_column, config: AlgorithmConfig, *, large_file: bool = False):
     try:
-        return add_outlying_elements_to_attribute(column_name, single_column), {}
+        return add_outlying_elements_to_attribute(column_name, single_column, config, large_file=large_file), {}
     except MemoryError:
         return {}, column_name
-
-
-def reset_global_values():
-    """
-    Reset a set of global variables to their default states.
-    :return: None
-    """
-    global ndistinct_manually_set
-    global memory_problems
-    global ndistinct_manual_setting
-    global large_file
-    global long_column_limit
-    global large_file_threshold
-    global regex_only
-    global generalised_only
-
-    memory_problems = False
-    ndistinct_manually_set = False
-    ndistinct_manual_setting = 0
-    large_file = False
-    long_column_limit = 36
-    large_file_threshold = 500000
-    regex_only = False
-    generalised_only = False
-
-
-def set_global_variables(manual_override_ndistinct):
-    global ndistinct_manually_set
-    global ndistinct_manual_setting
-    ndistinct_manually_set = True
-    ndistinct_manual_setting = manual_override_ndistinct
-    return None
 
 
 def process(file, manual_override_ndistinct=None, first_time=True, column_name=None, manual_override_long_column=None,
             manual_override_large_file_threshold=None, regex_transformation_only=False,
             generalised_transformation_only=False):
-    global large_file_threshold
-    if manual_override_large_file_threshold is not None:
-        print("Manual override")
-        large_file_threshold = manual_override_large_file_threshold
-        print(large_file_threshold)
-    else:
-        print("No manual override")
-        print(large_file_threshold)
-    global long_column_limit
-    if manual_override_long_column is not None:
-        long_column_limit = manual_override_long_column
-    global regex_only
-    global generalised_only
-    regex_only = regex_transformation_only
-    generalised_only = generalised_transformation_only
+    config = build_algorithm_config(
+        manual_override_ndistinct=manual_override_ndistinct,
+        manual_override_long_column=manual_override_long_column,
+        manual_override_large_file_threshold=manual_override_large_file_threshold,
+        regex_transformation_only=regex_transformation_only,
+        generalised_transformation_only=generalised_transformation_only,
+    )
 
     try:
         dataframe = read_data("resources/data_repository/" + file.filename, column_name)
     except AttributeError:
         dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/flightsDirty.csv")
 
-    if dataframe.shape[0] > large_file_threshold and first_time:  # if dataframe too large
+    if dataframe.shape[0] > config.large_file_threshold and first_time:
         return list(dataframe.columns)
-    if dataframe.shape[0] < large_file_threshold:
+
+    is_large_file = dataframe.shape[0] >= config.large_file_threshold
+
+    if not is_large_file:
         with joblib.parallel_backend("loky"):
-            print("Using parallel processing")
             try:
-                if manual_override_ndistinct is not None:
-                    set_global_variables(manual_override_ndistinct)
+                if config.ndistinct_manual_setting is not None:
                     output = {}
                     for column in dataframe.columns:
                         single_column = dataframe[column]
-                        output.update(process_column(column, single_column)[0])
+                        output.update(process_column(column, single_column, config, large_file=False)[0])
                     return output
                 else:
                     results = Parallel(n_jobs=-1)(
-                        delayed(process_column)(column, dataframe[column]) for column in dataframe.columns
+                        delayed(process_column)(column, dataframe[column], config, large_file=False)
+                        for column in dataframe.columns
                     )
             except:
                 output = {}
                 for column in dataframe.columns:
                     single_column = dataframe[column]
-                    output.update(process_column(column, single_column)[0])
+                    output.update(process_column(column, single_column, config, large_file=False)[0])
                 return output
     else:
-        global large_file
-        large_file = True
-        if manual_override_ndistinct is not None:
-            set_global_variables(manual_override_ndistinct)
         output = {}
         for column in dataframe.columns:
             single_column = dataframe[column]
-            output.update(process_column(column, single_column)[0])
+            output.update(process_column(column, single_column, config, large_file=True)[0])
         return output
+
     output = {}
     error_columns = []
 
@@ -835,9 +835,15 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
     for column in error_columns:
         single_column = dataframe[column]
         try:
-            output.update(add_outlying_elements_to_attribute(column, single_column))
+            output.update(add_outlying_elements_to_attribute(column, single_column, config, large_file=False))
         except:
-            global memory_problems
-            memory_problems = True
-            output.update(add_outlying_elements_to_attribute(column, single_column))
+            output.update(
+                add_outlying_elements_to_attribute(
+                    column,
+                    single_column,
+                    config,
+                    large_file=False,
+                    memory_problems=True,
+                )
+            )
     return output

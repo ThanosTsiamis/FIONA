@@ -1,0 +1,15 @@
+.idea/
+__pycache__/
+*.py[cod]
+
+api/__pycache__/
+api/resources/data_repository/*
+api/resources/json_dumps/*
+!api/resources/json_dumps/multipart_file/
+!api/resources/.gitignore
+
+client_side/node_modules/
+client_side/.next/
+client_side/out/
+
+.DS_Store
