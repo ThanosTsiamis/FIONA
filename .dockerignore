@@ -1,32 +1,15 @@
-# Ignore editor and IDE specific files
-.idea/
-.vscode/
-
-# Ignore build artifacts and output folders
-build/
-dist/
-
-# Ignore log files and temporary files
-logs/
-*.log
-
-
-# Ignore Demo files and videos
-demonstration_video/
-*.mp4
-
-# Ignore git files
 .git/
+.idea/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
 
-# Ignore github files
-.github/
+client_side/node_modules/
+client_side/.next/
+client_side/out/
 
-# Dependency directories
-node_modules/
+api/resources/data_repository/
+api/resources/json_dumps/
 
-# Development tools
-CODEOWNERS
-README.md
-
-# Python virtual environment files
-venv/
+demonstration_video/
