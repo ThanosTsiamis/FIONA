@@ -79,16 +79,13 @@ function FileUploadForm() {
             const res = await fetch(`${API_URL}/api/upload`, {
                 method: 'POST',
                 body: formData,
-                redirect: 'follow',
             });
-            setFilename(file.name);
-            if (res.redirected) {
-                router.push(res.url);
-            } else if (res.ok) {
-                await res.json();
-            } else {
+            if (!res.ok) {
                 throw new Error(`Upload failed with status ${res.status}`);
             }
+            const {result}: {result: string} = await res.json();
+            setFilename(result);
+            await router.push('/results');
         } catch (err) {
             console.error(err);
             setError('The upload failed. Is the API server running on ' + API_URL + '?');
