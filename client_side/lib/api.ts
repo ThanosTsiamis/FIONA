@@ -27,3 +27,35 @@ export interface ColumnResult {
 }
 
 export type Results = { [column: string]: ColumnResult };
+
+export const SUPPORTED_UPLOAD_EXTENSIONS = ['.csv', '.xlsx', '.json', '.tsv'] as const;
+export const PREVIEWABLE_EXTENSIONS = ['.csv', '.tsv'] as const;
+
+export function fileExtension(filename: string): string {
+    const dot = filename.lastIndexOf('.');
+    if (dot < 0) {
+        return '';
+    }
+    return filename.slice(dot).toLowerCase();
+}
+
+export function isSupportedUpload(filename: string): boolean {
+    return (SUPPORTED_UPLOAD_EXTENSIONS as readonly string[]).includes(fileExtension(filename));
+}
+
+export function isPreviewableDataset(filename: string): boolean {
+    return (PREVIEWABLE_EXTENSIONS as readonly string[]).includes(fileExtension(filename));
+}
+
+/** Prefer the JSON `error` field the API returns; fall back to a status line. */
+export async function readApiError(response: Response, fallback: string): Promise<string> {
+    try {
+        const payload = await response.json() as { error?: string };
+        if (payload && typeof payload.error === 'string' && payload.error.trim()) {
+            return payload.error;
+        }
+    } catch {
+        // Body was not JSON; use the fallback below.
+    }
+    return `${fallback} (${response.status})`;
+}

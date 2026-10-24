@@ -10,7 +10,7 @@ import PageButton from "../components/PageButton";
 import API_URL, {Results} from '../lib/api';
 
 const ResultsPage = () => {
-    const {filename, setFilename} = useContext(UploadContext);
+    const {filename, hydrated} = useContext(UploadContext);
     const [data, setData] = useState<Results>({});
     const [headers, setHeaders] = useState<string[]>([]);
     const [selectedKey, setSelectedKey] = useState<string>('');
@@ -18,6 +18,10 @@ const ResultsPage = () => {
     const [loadError, setLoadError] = useState<string>('');
 
     useEffect(() => {
+        if (!hydrated) {
+            return;
+        }
+
         const fetchData = async (name: string) => {
             try {
                 const response = await fetch(`${API_URL}/api/fetch/${encodeURIComponent(name)}`);
@@ -28,7 +32,7 @@ const ResultsPage = () => {
                 setData(jsonData);
                 const keys = Object.keys(jsonData);
                 setHeaders(keys);
-                setSelectedKey(keys[0] ?? ''); // Select first outer key by default
+                setSelectedKey(keys[0] ?? '');
             } catch (e) {
                 console.error(e);
                 setLoadError('Could not load these results. Is the API server running?');
@@ -41,35 +45,20 @@ const ResultsPage = () => {
             return;
         }
 
-        // The upload context is in-memory, so a refresh (or a shared link) leaves us
-        // with no filename and an empty page. Fall back to the most recent result.
-        const loadMostRecent = async () => {
-            try {
-                const response = await fetch(`${API_URL}/api/history`);
-                if (!response.ok) {
-                    throw new Error(`Request failed with status ${response.status}`);
-                }
-                const files: string[] = await response.json();
-                if (files.length === 0) {
-                    throw new Error('no results');
-                }
-                // os.listdir order is arbitrary, so sort for deterministic behaviour.
-                setFilename(files.sort().reverse()[0]);
-            } catch (e) {
-                console.error(e);
-                setLoadError('No dataset loaded. Upload one from the main page, or pick a previous run in History.');
-            }
-        };
+        setData({});
+        setHeaders([]);
+        setSelectedKey('');
+        setLoadError('No dataset loaded. Upload one from the main page, or pick a previous run in History.');
+    }, [filename, hydrated]);
 
-        loadMostRecent();
-    }, [filename, setFilename]);
+    const tabValue = headers.includes(selectedKey) ? selectedKey : false;
 
     return (
         <div>
             <PageButton href={"/"} label={"Main Page"} icon={"🏠"} iconLabel={"home"}></PageButton>
-            {headers.length > 0 && (
+            {headers.length > 0 && tabValue !== false && (
                 <Tabs
-                    value={selectedKey}
+                    value={tabValue}
                     onChange={(e, newValue) => setSelectedKey(newValue)}
                     variant="scrollable"
                     scrollButtons="auto"

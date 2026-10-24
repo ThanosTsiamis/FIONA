@@ -45,7 +45,7 @@ const HistoryPage = () => {
                 setResultsData(jsonData);
                 const keys = Object.keys(jsonData);
                 setHeaders(keys);
-                setSelectedKey(keys[0] ?? ''); // Select first outer key by default
+                setSelectedKey(keys[0] ?? '');
             } catch (e) {
                 console.error(e);
                 setLoadError('Error fetching results from server. Are you sure the server is running?');
@@ -54,9 +54,18 @@ const HistoryPage = () => {
 
         if (selectedFile) {
             setLoadError('');
+            setResultsData({});
+            setHeaders([]);
+            setSelectedKey('');
             fetchResultsData();
+        } else {
+            setResultsData({});
+            setHeaders([]);
+            setSelectedKey('');
         }
     }, [selectedFile]);
+
+    const tabValue = headers.includes(selectedKey) ? selectedKey : false;
 
     return (
         <div>
@@ -84,17 +93,19 @@ const HistoryPage = () => {
 
             {selectedFile && (
                 <div>
-                    <Tabs
-                        value={selectedKey}
-                        onChange={(e, newValue) => setSelectedKey(newValue)}
-                        variant="scrollable"
-                        scrollButtons="auto"
-                        aria-label="tabs"
-                    >
-                        {headers.map((headerKey) => (
-                            <Tab key={headerKey} value={headerKey} label={headerKey}/>
-                        ))}
-                    </Tabs>
+                    {headers.length > 0 && tabValue !== false && (
+                        <Tabs
+                            value={tabValue}
+                            onChange={(e, newValue) => setSelectedKey(newValue)}
+                            variant="scrollable"
+                            scrollButtons="auto"
+                            aria-label="tabs"
+                        >
+                            {headers.map((headerKey) => (
+                                <Tab key={headerKey} value={headerKey} label={headerKey}/>
+                            ))}
+                        </Tabs>
+                    )}
                     <ToggleSwitch
                         onChange={(checked: boolean) => setDetailedView(checked)}/>
                     {detailedView ? (

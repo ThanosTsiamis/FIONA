@@ -7,7 +7,7 @@ import FancyTable from "../components/FancyTable";
 import Header from "../components/Header";
 import CircularProgress from '@mui/material/CircularProgress';
 import PageButton from "../components/PageButton";
-import API_URL from '../lib/api';
+import API_URL, {isPreviewableDataset, isSupportedUpload, readApiError} from '../lib/api';
 
 function FileUploadForm() {
     const {setFilename} = useContext(UploadContext);
@@ -17,8 +17,10 @@ function FileUploadForm() {
     const largeFileThreshold = useRef<HTMLInputElement>(null)
     const router = useRouter();
     const [csvData, setCsvData] = useState<Array<Array<string>>>([]);
+    const [hasFile, setHasFile] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [previewNote, setPreviewNote] = useState('');
     const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
     const [isStillLoading, setIsStillLoading] = useState(false);
     const [regexCheckBox, setRegexCheckbox] = useState(false);
@@ -36,14 +38,29 @@ function FileUploadForm() {
 
     const handleFileChange = () => {
         const file = fileInput.current?.files?.[0];
+        setError('');
+        setPreviewNote('');
+        setCsvData([]);
+        setHasFile(Boolean(file));
         if (!file) {
             return;
         }
+
+        if (!isSupportedUpload(file.name)) {
+            setError('Unsupported file format. Use CSV, XLSX, JSON, or TSV.');
+            return;
+        }
+
+        if (!isPreviewableDataset(file.name)) {
+            setPreviewNote('Preview is only available for CSV and TSV files. You can still run detection on this file.');
+            return;
+        }
+
         const fileSizeInMb = file.size / (1024 * 1024);
         const maxFileSizeInMb = 1;
 
         if (fileSizeInMb > maxFileSizeInMb) {
-            setError('File is too large to be previewed on screen and will slow down your computer');
+            setPreviewNote('File is too large to preview here. You can still run detection on it.');
             return;
         }
 
@@ -60,6 +77,11 @@ function FileUploadForm() {
         const formData = new FormData();
         const file = fileInput.current?.files?.[0];
         if (!file) {
+            setError('Choose a dataset file first.');
+            return;
+        }
+        if (!isSupportedUpload(file.name)) {
+            setError('Unsupported file format. Use CSV, XLSX, JSON, or TSV.');
             return;
         }
         formData.append('file', file);
@@ -81,14 +103,19 @@ function FileUploadForm() {
                 body: formData,
             });
             if (!res.ok) {
-                throw new Error(`Upload failed with status ${res.status}`);
+                throw new Error(await readApiError(res, 'Upload failed'));
             }
             const {result}: {result: string} = await res.json();
             setFilename(result);
             await router.push('/results');
         } catch (err) {
             console.error(err);
-            setError('The upload failed. Is the API server running on ' + API_URL + '?');
+            // fetch raises TypeError when the API is unreachable (Chrome: "Failed to fetch").
+            if (err instanceof TypeError) {
+                setError('The upload failed. Is the API server running on ' + API_URL + '?');
+            } else {
+                setError(err instanceof Error ? err.message : 'The upload failed.');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -122,7 +149,12 @@ function FileUploadForm() {
             <div className="flex flex-col items-center justify-center">
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
-                        <input type="file" ref={fileInput} onChange={handleFileChange}/>
+                        <input
+                            type="file"
+                            ref={fileInput}
+                            accept=".csv,.xlsx,.json,.tsv"
+                            onChange={handleFileChange}
+                        />
                     </div>
                     <div className="mb-4">
                         {showAdvancedOptions && (
@@ -162,13 +194,14 @@ function FileUploadForm() {
                     </div>
                     <button
                         type="submit"
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
-                        disabled={isLoading}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        disabled={isLoading || !hasFile}
                     >
                         Run
                     </button>
                 </form>
                 {error && <p className="text-red-500">{error}</p>}
+                {previewNote && <p className="text-gray-500">{previewNote}</p>}
                 <button
                     onClick={toggleAdvancedOptions}
                     disabled={showAdvancedOptions}
