@@ -6,60 +6,55 @@ import ToggleSwitch from "../components/ToggleSwitch";
 import BriefSection from "../components/BriefSection";
 import InfoBox from "../components/InfoBox";
 import PageButton from "../components/PageButton";
-
-type HistoryData = {
-    [key: string]: string[];
-};
-
-type Data = {
-    [key: string]: {
-        [key: string]: {
-            [key: string]: {
-                [key: string]: number;
-            };
-        };
-    };
-};
+import API_URL, {Results} from '../lib/api';
 
 const HistoryPage = () => {
-    const [historyData, setHistoryData] = useState<HistoryData>({});
+    // /api/history returns a plain array of file names.
+    const [historyData, setHistoryData] = useState<string[]>([]);
     const [selectedFile, setSelectedFile] = useState<string>('');
-    const [resultsData, setResultsData] = useState<Data>({});
+    const [resultsData, setResultsData] = useState<Results>({});
     const [headers, setHeaders] = useState<string[]>([]);
     const [selectedKey, setSelectedKey] = useState<string>('');
     const [detailedView, setDetailedView] = useState<boolean>(false);
+    const [loadError, setLoadError] = useState<string>('');
 
     useEffect(() => {
-        // Here we fetch the history data from the server. But the server sometimes may be down. Display an appropriate message to the user.
         const fetchHistoryData = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/history');
-                const jsonData = await response.json();
-                setHistoryData(jsonData);
+                const response = await fetch(`${API_URL}/api/history`);
+                if (!response.ok) {
+                    throw new Error(`Request failed with status ${response.status}`);
+                }
+                setHistoryData(await response.json());
             } catch (e) {
                 console.error(e);
-                alert("Error fetching history from server. Are you sure server is running?");
+                setLoadError('Error fetching history from server. Are you sure the server is running?');
             }
         };
-        fetchHistoryData().then(r => r);
+        fetchHistoryData();
     }, []);
 
     useEffect(() => {
         const fetchResultsData = async () => {
             try {
-                const response = await fetch(`http://localhost:5000/api/fetch/${selectedFile}`);
-                const jsonData = await response.json();
+                const response = await fetch(`${API_URL}/api/fetch/${encodeURIComponent(selectedFile)}`);
+                if (!response.ok) {
+                    throw new Error(`Request failed with status ${response.status}`);
+                }
+                const jsonData: Results = await response.json();
                 setResultsData(jsonData);
-                setHeaders(Object.keys(jsonData));
-                setSelectedKey(Object.keys(jsonData)[0]); // Select first outer key by default
+                const keys = Object.keys(jsonData);
+                setHeaders(keys);
+                setSelectedKey(keys[0] ?? ''); // Select first outer key by default
             } catch (e) {
                 console.error(e);
-                alert("Error fetching results from server. Are you sure server is running?");
+                setLoadError('Error fetching results from server. Are you sure the server is running?');
             }
         };
 
         if (selectedFile) {
-            fetchResultsData().then(r => r);
+            setLoadError('');
+            fetchResultsData();
         }
     }, [selectedFile]);
 
@@ -77,13 +72,15 @@ const HistoryPage = () => {
                     className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm"
                 >
                     <option value="">-- Select a file --</option>
-                    {Object.keys(historyData).map((key) => (
-                        <option key={key} value={historyData[key]}>
-                            {historyData[key]}
+                    {historyData.map((file) => (
+                        <option key={file} value={file}>
+                            {file}
                         </option>
                     ))}
                 </select>
             </div>
+
+            {loadError && <InfoBox message={loadError}/>}
 
             {selectedFile && (
                 <div>
@@ -108,7 +105,7 @@ const HistoryPage = () => {
                     ) : (
                         resultsData[selectedKey] ? (
                             <>
-                                <BriefSection data={{[selectedKey]: {outliers: resultsData[selectedKey]}}}
+                                <BriefSection data={{[selectedKey]: {outliers: resultsData[selectedKey].outliers}}}
                                               keyName={selectedKey}/>
                                 <InfoBox
                                     message={"This bar chart orders bars from left to right to show certainty of outliers: the leftmost bar is the most significant outlier, and each subsequent bar to the right is less so."}/>

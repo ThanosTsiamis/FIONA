@@ -55,13 +55,14 @@ const FancySwitch = styled(Switch)(({theme}: { theme: Theme }) => ({
 const ToggleSwitch: React.FC<ToggleSwitchProps> = ({onChange}) => { // Use ToggleSwitchProps
     const [collapsed, setCollapsed] = useState(false);
 
+    // The parent's setState must not be called from inside the updater function:
+    // React may invoke an updater twice (StrictMode) and a side effect there would
+    // fire onChange twice.
     const toggleCollapsed = useCallback(() => {
-        setCollapsed((previouslyCollapsed) => {
-            const newCollapsed = !previouslyCollapsed;
-            onChange(newCollapsed); // Call onChange prop when the switch is toggled
-            return newCollapsed;
-        });
-    }, [onChange]);
+        const next = !collapsed;
+        setCollapsed(next);
+        onChange(next);
+    }, [onChange, collapsed]);
 
     return (
         <Stack direction="row" component="label" alignItems="center" justifyContent="center">

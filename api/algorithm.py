@@ -1,5 +1,6 @@
 import gc
 import logging
+import os
 from datetime import datetime
 
 import chardet
@@ -9,7 +10,6 @@ import pandas as pd
 from anytree import Node
 from cachetools import cached, TTLCache
 from doubledouble import DoubleDouble
-import psutil
 from joblib import Parallel, delayed
 
 logging.basicConfig(level=logging.DEBUG)
@@ -22,6 +22,27 @@ long_column_limit = 36  # This is based on the length of a UUID
 large_file_threshold = 500000
 regex_only = False
 generalised_only = False
+
+
+def safe_filename(filename) -> str:
+    """
+    Reduce an untrusted name (an uploaded file name or a CSV header) to a single safe
+    path component. Both are attacker-controlled; when they were concatenated straight
+    into paths, "../../evil.json" escaped the directory it was written into.
+    :param filename: the untrusted name
+    :return: a name with no directory component and no filesystem-hostile characters
+    """
+    # Drop characters that are invalid in a path component on at least one common
+    # filesystem (< > : " | ? *) along with any control characters. Done before the
+    # basename() call so the result does not depend on the host's path module
+    # (Windows treats a leading "x:" as a drive letter).
+    name = "".join(ch for ch in str(filename) if ch.isprintable() and ch not in '<>:"|?*')
+    # Normalise separators first so Windows-style "..\..\" collapses on POSIX too.
+    name = os.path.basename(name.replace("\\", "/"))
+    # Leading/trailing dots and spaces are significant on Windows (reserved devices,
+    # trailing-dot stripping) and are never meaningful for an uploaded dataset.
+    name = name.strip(". ")
+    return name or "upload"
 
 
 def read_data(filename, column_name=None):
@@ -786,7 +807,8 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
     generalised_only = generalised_transformation_only
 
     try:
-        dataframe = read_data("resources/data_repository/" + file.filename, column_name)
+        dataframe = read_data(os.path.join("resources/data_repository", safe_filename(file.filename)),
+                              column_name)
     except AttributeError:
         dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/flightsDirty.csv")
 
