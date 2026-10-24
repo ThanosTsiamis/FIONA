@@ -1,18 +1,9 @@
 import React, {useState} from 'react';
 import InfoBox from "./InfoBox";
 import Tooltip from '@mui/material/Tooltip';
+import {PatternsByThreshold, Results} from '../lib/api';
 
-type Data = {
-    [key: string]: {
-        [key: string]: {
-            [key: string]: {
-                [key: string]: number;
-            };
-        };
-    };
-};
-
-const PatternsTable: React.FC<{ resultsData: Data, selectedKey: string }> = ({resultsData, selectedKey}) => {
+const PatternsTable: React.FC<{ resultsData: Results, selectedKey: string }> = ({resultsData, selectedKey}) => {
     const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
     const toggleRow = (pattern: string) => {
@@ -23,10 +14,13 @@ const PatternsTable: React.FC<{ resultsData: Data, selectedKey: string }> = ({re
         }
     };
 
+    const patternsByThreshold: PatternsByThreshold | undefined =
+        resultsData[selectedKey]?.patterns;
+
     return (
         <>
             <h2 style={{fontSize: '60px', marginTop: '20px', marginBottom: '20px'}}>Patterns</h2>
-            {resultsData[selectedKey] && resultsData[selectedKey]['patterns'] && (
+            {patternsByThreshold && (
                 <table>
                     <thead>
                     <tr>
@@ -39,9 +33,9 @@ const PatternsTable: React.FC<{ resultsData: Data, selectedKey: string }> = ({re
                     </tr>
                     </thead>
                     <tbody>
-                    {Object.keys(resultsData[selectedKey]['patterns']).map((innerKey, index, array) => {
-                        const current = resultsData[selectedKey]['patterns'][innerKey];
-                        const previous = index < array.length - 1 ? resultsData[selectedKey]['patterns'][array[index + 1]] : {};
+                    {Object.keys(patternsByThreshold).map((innerKey, index, array) => {
+                        const current = patternsByThreshold[innerKey];
+                        const previous = index < array.length - 1 ? patternsByThreshold[array[index + 1]] : {};
                         const patterns: { [key: string]: number } = {};
 
                         for (const [key, value] of Object.entries(current)) {
@@ -61,7 +55,7 @@ const PatternsTable: React.FC<{ resultsData: Data, selectedKey: string }> = ({re
                         }
 
                         return (
-                            <>
+                            <React.Fragment key={innerKey}>
                                 {Object.entries(patterns).map(([pattern, value]) => {
                                     const sum = value;
                                     const isExpanded = expandedRow === pattern;
@@ -96,7 +90,7 @@ const PatternsTable: React.FC<{ resultsData: Data, selectedKey: string }> = ({re
                                         </React.Fragment>
                                     );
                                 })}
-                            </>
+                            </React.Fragment>
                         );
                     })}
                     </tbody>

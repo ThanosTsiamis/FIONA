@@ -6,7 +6,7 @@ import ujson as ujson
 from cachetools import cached, TTLCache
 from flask import Flask, request, jsonify, redirect, Response
 
-from algorithm import process, logger, reset_global_values
+from algorithm import process, logger, reset_global_values, safe_filename
 
 app = Flask("FIONA")
 
@@ -22,7 +22,10 @@ def internal_server_error(error):
 def upload_file():
     if request.method == 'POST':
         f = request.files['file']
-        f.save("resources/data_repository/" + f.filename)
+        # The uploaded file name is attacker-controlled, so it must be reduced to a
+        # single safe path component before it touches the filesystem.
+        safe_name = safe_filename(f.filename)
+        f.save(os.path.join("resources/data_repository", safe_name))
         ndistinct_manual_set = request.form.get('number')
         long_column_cutoff = request.form.get('long_column_cutoff')
         large_file_threshold_input = request.form.get('largeFile_threshold_input')
@@ -64,10 +67,11 @@ def upload_file():
             for column in columns:
                 outlying_elements = process(f, ndistinct_manual_set, first_time=False, column_name=column)
                 json_serialised = json.dumps(outlying_elements, indent=4)  # Specify indentation level
-                basepath = f"resources/json_dumps/multipart_file/{f.filename}/"
-                directory = os.path.dirname(basepath)
-                os.makedirs(directory, exist_ok=True)
-                with open(basepath + column + ".json", "w") as outfile:
+                # A column name comes from the uploaded CSV's header row, so it is
+                # attacker-controlled in exactly the same way as the file name.
+                column_dir = os.path.join("resources/json_dumps/multipart_file", safe_name)
+                os.makedirs(column_dir, exist_ok=True)
+                with open(os.path.join(column_dir, safe_filename(column) + ".json"), "w") as outfile:
                     outfile.write(json_serialised)
 
             # merge and delete here
@@ -95,7 +99,7 @@ def upload_file():
                     # shutil.rmtree(root)
         else:
             json_serialised = json.dumps(outlying_elements, indent=4)  # Specify indentation level
-            with open("resources/json_dumps/" + f.filename + ".json", "w") as outfile:
+            with open(os.path.join("resources/json_dumps", safe_name + ".json"), "w") as outfile:
                 outfile.write(json_serialised)
         # Measure the time taken to process the file
         end_time = datetime.now()

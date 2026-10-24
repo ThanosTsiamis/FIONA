@@ -10,6 +10,7 @@ import {
     Title,
     Tooltip
 } from 'chart.js';
+import {OutliersByThreshold, Results} from '../lib/api';
 
 ChartJS.register(
     CategoryScale,
@@ -21,33 +22,12 @@ ChartJS.register(
     LogarithmicScale
 );
 
-interface DataItem {
-    [key: string]: {
-        [representative: string]: number;
-    };
-}
-
-interface Outliers {
-    [key: string]: DataItem;
-}
-
-interface Props {
-    data: {
-        [key: string]: {
-            outliers: Outliers;
-        };
-    };
-    keyName: string;
-}
-
-const processData = (outliers: Outliers) => {
+const processData = (outliers: OutliersByThreshold) => {
     const labels = new Set<string>();
     const dataPoints: { [key: string]: number } = {};
     const seenOutliers: { [key: string]: Set<string> } = {};
-    console.log(outliers);
-    console.log(outliers.outliers)
-    let dataItem = outliers.outliers
-
+    // `outliers` is the outlier dictionary itself: {threshold: {representative: {value: count}}}
+    const dataItem = outliers;
 
     Object.entries(dataItem).forEach(([band, representatives]) => {
         Object.entries(representatives).forEach(([representative, outlierwithFreq]) => {
@@ -84,15 +64,16 @@ const options = {
     scales: {
         y: {
             type: 'logarithmic' as const,
-            beginAtZero: true,
+            // A logarithmic axis cannot include zero (log(0) is undefined) and
+            // beginAtZero is not supported for it, so the axis starts at 1.
+            min: 1,
         },
     },
 };
 
-const BriefSection: React.FC<Props> = ({data, keyName}) => {
+const BriefSection: React.FC<{ data: Results, keyName: string }> = ({data, keyName}) => {
     const specificData = data[keyName];
     if (!specificData || typeof specificData.outliers === 'undefined') {
-        console.log('Error: Data for the specified key name does not exist.', data);
         return <div>Error: Data for the specified key name does not exist.</div>;
     }
 

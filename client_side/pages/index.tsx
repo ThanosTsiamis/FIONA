@@ -7,6 +7,7 @@ import FancyTable from "../components/FancyTable";
 import Header from "../components/Header";
 import CircularProgress from '@mui/material/CircularProgress';
 import PageButton from "../components/PageButton";
+import API_URL from '../lib/api';
 
 function FileUploadForm() {
     const {setFilename} = useContext(UploadContext);
@@ -69,12 +70,13 @@ function FileUploadForm() {
         const largeFile_threshold_input = largeFileThreshold.current?.value
         formData.append('largeFile_threshold_input', largeFile_threshold_input || '')
 
-        formData.append('regex_transformation_only', regexCheckBox.toString() || '');
-        formData.append('generalised_transformation_only', generalisedCheckBox.toString() || '');
+        formData.append('regex_transformation_only', regexCheckBox ? 'true' : '');
+        formData.append('generalised_transformation_only', generalisedCheckBox ? 'true' : '');
 
         try {
             setIsLoading(true);
-            const res = await fetch('http://localhost:5000/api/upload', {
+            setError('');
+            const res = await fetch(`${API_URL}/api/upload`, {
                 method: 'POST',
                 body: formData,
                 redirect: 'follow',
@@ -82,11 +84,14 @@ function FileUploadForm() {
             setFilename(file.name);
             if (res.redirected) {
                 router.push(res.url);
+            } else if (res.ok) {
+                await res.json();
             } else {
-                const data = await res.json();
+                throw new Error(`Upload failed with status ${res.status}`);
             }
         } catch (err) {
             console.error(err);
+            setError('The upload failed. Is the API server running on ' + API_URL + '?');
         } finally {
             setIsLoading(false);
         }

@@ -1,26 +1,22 @@
 import React from 'react';
+import {OutliersByThreshold, Results, ValueCounts} from '../lib/api';
 
-type Data = {
-    [key: string]: {
-        [key: string]: {
-            [key: string]: {
-                [key: string]: number;
-            };
-        };
-    };
-};
-
-const OutliersTable: React.FC<{ resultsData: Data, selectedKey: string }> = ({ resultsData, selectedKey }) => {
+const OutliersTable: React.FC<{ resultsData: Results, selectedKey: string }> = ({ resultsData, selectedKey }) => {
     // Helper function to convert a string to a number
     const toNumber = (str: string): number => {
         const n = parseFloat(str);
         return isNaN(n) ? 0 : Number(n.toFixed(4));
     };
 
+    // selectedKey is not guaranteed to be a key of resultsData (e.g. before the fetch
+    // resolves), so resolve the column defensively instead of indexing straight in.
+    const outliersByThreshold: OutliersByThreshold | undefined =
+        resultsData[selectedKey]?.outliers;
+
     return (
         <>
             <h2 style={{ fontSize: '60px', marginTop: '20px', marginBottom: '20px' }}>Outliers</h2>
-            {Object.keys(resultsData).length > 0 && (
+            {outliersByThreshold && (
                 <table>
                     <thead>
                         <tr>
@@ -30,13 +26,15 @@ const OutliersTable: React.FC<{ resultsData: Data, selectedKey: string }> = ({ r
                         </tr>
                     </thead>
                     <tbody>
-                        {Object.keys(resultsData[selectedKey]['outliers'])
+                        {Object.keys(outliersByThreshold)
                             .sort((a, b) => toNumber(a) - toNumber(b))
                             .map((innerKey, index, array) => {
-                                const current = resultsData[selectedKey]['outliers'][innerKey];
-                                const previous = index > 0 ? resultsData[selectedKey]['outliers'][array[index - 1]] : {};
+                                const current = outliersByThreshold[innerKey];
+                                const previous = index > 0 ? outliersByThreshold[array[index - 1]] : {};
 
-                                const occurrences: { [key: string]: number } = {};
+                                // A representative maps to {value: count}, not a bare count, so the
+                                // occurrences column renders the whole map (as it always has).
+                                const occurrences: { [key: string]: ValueCounts } = {};
                                 for (const [key, value] of Object.entries(current)) {
                                     if (!(key in previous)) {
                                         occurrences[key] = value;
@@ -62,8 +60,8 @@ const OutliersTable: React.FC<{ resultsData: Data, selectedKey: string }> = ({ r
                                             ))}
                                         </td>
                                         <td colSpan={1} className="border-t border-r border-black border-b">
-                                            {Object.values(occurrences).map((value, index) => (
-                                                <div key={value}>
+                                            {Object.entries(occurrences).map(([key, value], index) => (
+                                                <div key={key}>
                                                     {JSON.stringify(value)}
                                                     {index !== Object.values(occurrences).length - 1 && (
                                                         <hr className="border-dotted border-black my-1" />

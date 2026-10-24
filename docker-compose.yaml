@@ -1,4 +1,3 @@
-version: '3.7'
 networks:
   app-network:
 
@@ -7,7 +6,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    image: 'ghcr.io/thanostsiamis/fiona/api-service:latest'  
+    image: 'ghcr.io/thanostsiamis/fiona/api-service:latest'
     volumes:
       - './api:/usr/src/app'
     ports:
@@ -29,7 +28,8 @@ services:
       - "3000:3000"
     environment:
       - "NODE_ENV=development"
-      - "REACT_APP_SERVICE_URL=http://localhost:8080"
+      # Next.js only inlines NEXT_PUBLIC_* variables into the client bundle.
+      - "NEXT_PUBLIC_API_URL=http://localhost:5000"
       - "CHOKIDAR_USEPOLLING=true"
     depends_on:
       - api-service
