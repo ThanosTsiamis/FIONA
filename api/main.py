@@ -1,125 +1,127 @@
 import json
-import os
 from datetime import datetime
+from pathlib import Path
+from threading import Lock
+from uuid import uuid4
 
 import ujson as ujson
-from cachetools import cached, TTLCache
-from flask import Flask, request, jsonify, redirect, Response
+from flask import Flask, Response, jsonify, request
 
 from algorithm import process, logger, reset_global_values, safe_filename
 
 app = Flask("FIONA")
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "resources" / "data_repository"
+RESULTS_DIR = BASE_DIR / "resources" / "json_dumps"
+SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".json", ".tsv"}
+# algorithm.py currently keeps per-run settings in module globals. Keep that
+# state isolated until it can be refactored into an explicit configuration object.
+PROCESSING_LOCK = Lock()
+
+
+def json_response(payload, status=200):
+    response = jsonify(payload)
+    response.status_code = status
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
+
+
+def parse_optional_positive_int(value, field_name):
+    if value in (None, ""):
+        return None
+    try:
+        parsed = int(value)
+    except ValueError:
+        raise ValueError(f"{field_name} must be a whole number.")
+    if parsed <= 0:
+        raise ValueError(f"{field_name} must be greater than zero.")
+    return parsed
+
+
+def parse_boolean(value):
+    return str(value).lower() == "true"
+
+
+def result_path(filename):
+    """Return a result path only when *filename* is a single safe component."""
+    safe_name = safe_filename(filename)
+    if safe_name != filename:
+        return None
+    if not safe_name.endswith(".json"):
+        safe_name += ".json"
+    return RESULTS_DIR / safe_name
 
 
 @app.errorhandler(500)
 def internal_server_error(error):
-    redirection = redirect("http://localhost:3000/error")
-    redirection.headers.add('Access-Control-Allow-Origin', '*')
-    return redirection
+    logger.exception("Unhandled server error", exc_info=error)
+    return json_response({"error": "The server could not process this request."}, 500)
 
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
-    if request.method == 'POST':
-        f = request.files['file']
-        # The uploaded file name is attacker-controlled, so it must be reduced to a
-        # single safe path component before it touches the filesystem.
-        safe_name = safe_filename(f.filename)
-        f.save(os.path.join("resources/data_repository", safe_name))
-        ndistinct_manual_set = request.form.get('number')
-        long_column_cutoff = request.form.get('long_column_cutoff')
-        large_file_threshold_input = request.form.get('largeFile_threshold_input')
-        regex_only = request.form.get('regex_transformation_only')
-        if regex_only is not None and regex_only != "":
-            regex_only = regex_only.lower() == "true"
-        else:
-            regex_only = False
-        generalised_only = request.form.get('generalised_transformation_only')
-        if generalised_only is not None and generalised_only != "":
-            generalised_only = generalised_only.lower() == "true"
-        else:
-            generalised_only = False
-        if ndistinct_manual_set is not None and ndistinct_manual_set != "":
-            ndistinct_manual_set = int(ndistinct_manual_set)
-        else:
-            # Handle the case when no number is provided
-            ndistinct_manual_set = None
+    f = request.files.get('file')
+    if f is None or not f.filename:
+        return json_response({"error": "A dataset file is required."}, 400)
 
-        if long_column_cutoff is not None and long_column_cutoff != "":
-            long_column_cutoff = int(long_column_cutoff)
-        else:
-            # Handle the case when no number is provided
-            long_column_cutoff = None
+    original_name = safe_filename(f.filename)
+    extension = Path(original_name).suffix.lower()
+    if extension not in SUPPORTED_EXTENSIONS:
+        return json_response({"error": "Unsupported file format. Use CSV, XLSX, JSON, or TSV."}, 400)
 
-        if large_file_threshold_input is not None and large_file_threshold_input != "":
-            large_file_threshold_input = int(large_file_threshold_input)
-        else:
-            # Handle the case when no number is provided
-            large_file_threshold_input = None
+    try:
+        ndistinct_manual_set = parse_optional_positive_int(request.form.get('number'), 'number')
+        long_column_cutoff = parse_optional_positive_int(request.form.get('long_column_cutoff'), 'long_column_cutoff')
+        large_file_threshold_input = parse_optional_positive_int(
+            request.form.get('largeFile_threshold_input'), 'largeFile_threshold_input')
+    except ValueError as error:
+        return json_response({"error": str(error)}, 400)
 
-        # Measure the time taken to process the file
+    # Do not use a client-supplied name as a storage key: concurrent uploads must
+    # neither overwrite each other nor expose each other's results.
+    job_id = uuid4().hex
+    stored_name = f"{job_id}{extension}"
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    f.save(DATA_DIR / stored_name)
+
+    regex_only = parse_boolean(request.form.get('regex_transformation_only'))
+    generalised_only = parse_boolean(request.form.get('generalised_transformation_only'))
+    with PROCESSING_LOCK:
         start_time = datetime.now()
-        outlying_elements = process(f, ndistinct_manual_set, first_time=True,
-                                    manual_override_long_column=long_column_cutoff,
-                                    manual_override_large_file_threshold=large_file_threshold_input)
-        if isinstance(outlying_elements, list):
-            columns = outlying_elements
-            for column in columns:
-                outlying_elements = process(f, ndistinct_manual_set, first_time=False, column_name=column)
-                json_serialised = json.dumps(outlying_elements, indent=4)  # Specify indentation level
-                # A column name comes from the uploaded CSV's header row, so it is
-                # attacker-controlled in exactly the same way as the file name.
-                column_dir = os.path.join("resources/json_dumps/multipart_file", safe_name)
-                os.makedirs(column_dir, exist_ok=True)
-                with open(os.path.join(column_dir, safe_filename(column) + ".json"), "w") as outfile:
-                    outfile.write(json_serialised)
+        try:
+            outlying_elements = process(stored_name, ndistinct_manual_set, first_time=True,
+                                        manual_override_long_column=long_column_cutoff,
+                                        manual_override_large_file_threshold=large_file_threshold_input,
+                                        regex_transformation_only=regex_only,
+                                        generalised_transformation_only=generalised_only)
+            if isinstance(outlying_elements, list):
+                merged_data = {}
+                for column in outlying_elements:
+                    column_result = process(stored_name, ndistinct_manual_set, first_time=False, column_name=column,
+                                            regex_transformation_only=regex_only,
+                                            generalised_transformation_only=generalised_only)
+                    merged_data.update(column_result)
+                outlying_elements = merged_data
 
-            # merge and delete here
-            folder_path = "resources/json_dumps/multipart_file"
-            output_dir = os.path.dirname(folder_path)
-
-            for root, dirs, files in os.walk(folder_path):
-                if root != folder_path:
-                    merged_data = {}
-                    for filename in files:
-                        if filename.endswith(".json"):
-                            file_path = os.path.join(root, filename)
-                            with open(file_path, "r") as file:
-                                json_data = json.load(file)
-                                merged_data.update(json_data)
-
-                    subdir_name = os.path.basename(root)
-                    merged_json = json.dumps(merged_data, indent=4)  # Specify indentation level
-
-                    output_file = os.path.join(output_dir, subdir_name + ".json")
-                    with open(output_file, "w") as file:
-                        file.write(merged_json)
-
-                    # Remove the subdirectory
-                    # shutil.rmtree(root)
-        else:
-            json_serialised = json.dumps(outlying_elements, indent=4)  # Specify indentation level
-            with open(os.path.join("resources/json_dumps", safe_name + ".json"), "w") as outfile:
-                outfile.write(json_serialised)
-        # Measure the time taken to process the file
-        end_time = datetime.now()
-        time_taken = end_time - start_time
-        logger.debug(f"Time taken to process the file: {time_taken}")
-        redirection = redirect("http://localhost:3000/results")
-        redirection.headers.add('Access-Control-Allow-Origin', '*')
-        reset_global_values()
-        return redirection
+            result_name = f"{job_id}.json"
+            with (RESULTS_DIR / result_name).open("w", encoding="utf-8") as outfile:
+                json.dump(outlying_elements, outfile, indent=4)
+            end_time = datetime.now()
+            time_taken = end_time - start_time
+            logger.debug(f"Time taken to process the file: {time_taken}")
+            return json_response({"result": result_name}, 201)
+        finally:
+            reset_global_values()
 
 
-@cached(cache=TTLCache(maxsize=1, ttl=60))
 @app.route("/api/fetch/<string:filename>", methods=['GET'])
 def fetch(filename):
-    file_path = os.path.join("resources/json_dumps", filename)
+    file_path = result_path(filename)
+    if file_path is None or not file_path.is_file():
+        return json_response({"error": "Result not found."}, 404)
 
-    if not filename.endswith(".json"):
-        file_path += ".json"
-
-    with open(file_path) as f:
+    with file_path.open(encoding="utf-8") as f:
         data = ujson.load(f)
 
     response = Response(ujson.dumps(data), content_type='application/json')
@@ -128,16 +130,10 @@ def fetch(filename):
     return response
 
 
-@cached(cache=TTLCache(maxsize=1, ttl=180))
 @app.route("/api/history", methods=['GET'])
 def get_json_files():
-    json_files = []
-    for file in os.listdir('resources/json_dumps'):
-        if file.endswith('.json'):
-            json_files.append(file)
-    response = jsonify(json_files)
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    return response
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    return json_response(sorted(path.name for path in RESULTS_DIR.glob('*.json')))
 
 
 if __name__ == "__main__":

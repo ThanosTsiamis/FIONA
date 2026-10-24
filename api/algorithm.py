@@ -14,6 +14,7 @@ from joblib import Parallel, delayed
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 memory_problems = False
 ndistinct_manually_set = False
 ndistinct_manual_setting = 2
@@ -748,7 +749,18 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
     return lexicon
 
 
-def process_column(column_name, single_column):
+def process_column(column_name, single_column, manual_override_long_column=None,
+                   regex_transformation_only=None, generalised_transformation_only=None):
+    """Process one column with the request configuration in worker processes."""
+    global long_column_limit
+    global regex_only
+    global generalised_only
+    if manual_override_long_column is not None:
+        long_column_limit = manual_override_long_column
+    if regex_transformation_only is not None:
+        regex_only = regex_transformation_only
+    if generalised_transformation_only is not None:
+        generalised_only = generalised_transformation_only
     try:
         return add_outlying_elements_to_attribute(column_name, single_column), {}
     except MemoryError:
@@ -806,11 +818,15 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
     regex_only = regex_transformation_only
     generalised_only = generalised_transformation_only
 
-    try:
-        dataframe = read_data(os.path.join("resources/data_repository", safe_filename(file.filename)),
-                              column_name)
-    except AttributeError:
-        dataframe = read_data("resources/datasets/datasets_testing_purposes/flights/flightsDirty.csv")
+    if isinstance(file, (str, os.PathLike)):
+        dataframe = read_data(os.path.join(BASE_DIR, "resources", "data_repository", safe_filename(file)), column_name)
+    else:
+        try:
+            dataframe = read_data(os.path.join(BASE_DIR, "resources", "data_repository", safe_filename(file.filename)),
+                                  column_name)
+        except AttributeError:
+            dataframe = read_data(os.path.join(
+                BASE_DIR, "resources", "datasets", "datasets_testing_purposes", "flights", "flightsDirty.csv"))
 
     if dataframe.shape[0] > large_file_threshold and first_time:  # if dataframe too large
         return list(dataframe.columns)
@@ -823,17 +839,24 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
                     output = {}
                     for column in dataframe.columns:
                         single_column = dataframe[column]
-                        output.update(process_column(column, single_column)[0])
+                        output.update(process_column(
+                            column, single_column, manual_override_long_column,
+                            regex_transformation_only, generalised_transformation_only)[0])
                     return output
                 else:
                     results = Parallel(n_jobs=-1)(
-                        delayed(process_column)(column, dataframe[column]) for column in dataframe.columns
+                        delayed(process_column)(
+                            column, dataframe[column], manual_override_long_column,
+                            regex_transformation_only, generalised_transformation_only)
+                        for column in dataframe.columns
                     )
             except:
                 output = {}
                 for column in dataframe.columns:
                     single_column = dataframe[column]
-                    output.update(process_column(column, single_column)[0])
+                    output.update(process_column(
+                        column, single_column, manual_override_long_column,
+                        regex_transformation_only, generalised_transformation_only)[0])
                 return output
     else:
         global large_file
@@ -843,7 +866,9 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
         output = {}
         for column in dataframe.columns:
             single_column = dataframe[column]
-            output.update(process_column(column, single_column)[0])
+            output.update(process_column(
+                column, single_column, manual_override_long_column,
+                regex_transformation_only, generalised_transformation_only)[0])
         return output
     output = {}
     error_columns = []
