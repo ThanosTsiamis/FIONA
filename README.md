@@ -24,13 +24,11 @@ There are 2 ways to run the project: (i) [Locally](#local-execution) and (ii) in
 
 For the **front end**:
 
-One-liner in terminal: `cd .\client_side\ & npm install & npm run dev`
+One-liner in a PowerShell terminal: `cd .\client_side\; npm install; npm run dev`
 
-Note: The above command may not work on Windows. In that case, swap the ampersands for semicolons:
+One-liner in a bash terminal: `cd client_side && npm install && npm run dev`
 
 Step by step:
-
-
 
 - Open a terminal and cd to the `client_side` folder
 - Run the command `npm install`
@@ -38,16 +36,25 @@ Step by step:
 
 For the **back end**:
 
-One-liner in terminal `cd api & pip install -r requirements.txt & python main.py`
+One-liner in a PowerShell terminal: `cd api; pip install -r requirements.txt; python main.py`
 
-As before in case the above command doesn't work `cd api ; pip install
--r requirements.txt ; python main.py`
+One-liner in a bash terminal: `cd api && pip install -r requirements.txt && python main.py`
 
 Step by step:
 
 - Open a second terminal and cd to the api folder
 - Install the necessary requirements in `requirements.txt` file
 - Run the command `python main.py`
+
+### Tests
+
+The test suite lives in `api/tests`. It needs the test-only dependencies:
+
+```bash
+cd api
+pip install -r requirements-dev.txt
+pytest
+```
 
 ### Docker
 
@@ -58,7 +65,19 @@ install it [here](https://docs.docker.com/get-docker/).
 
 - Open a terminal or command prompt.
 
-- Run the following command to start the Docker containers: `docker compose up`
+- Run the following command to start the Docker containers: `docker compose up --build`
+
+The Docker images run production servers (Gunicorn for the API and a production Next.js build for the client), so
+rebuild them after changing the source. Use the [local execution](#local-execution) instructions for hot reloading.
+
+The client uses `NEXT_PUBLIC_API_URL` at build time (Next.js inlines `NEXT_PUBLIC_*` variables). Set it before building if
+the browser should reach the API at a different address. For example, in PowerShell:
+`$env:NEXT_PUBLIC_API_URL="http://localhost:5000"; docker compose build client-service`, or in bash:
+`NEXT_PUBLIC_API_URL=http://localhost:5000 docker compose build client-service`.
+
+Uploaded files and results are stored in the `fiona-data` and `fiona-results` Docker volumes. Results older than 7 days
+are pruned automatically; set `FIONA_RESULT_RETENTION_DAYS` to change that period (0 disables pruning). Set
+`FIONA_LOG_LEVEL` (default `INFO`) to control the API log level.
 
 Please make sure that approximately 2GB of storage are available for the 2 docker containers.
 
