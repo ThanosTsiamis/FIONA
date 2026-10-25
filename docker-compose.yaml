@@ -1,6 +1,10 @@
 networks:
   app-network:
 
+volumes:
+  fiona-data:
+  fiona-results:
+
 services:
   api-service:
     build:
@@ -8,11 +12,14 @@ services:
       dockerfile: Dockerfile
     image: 'ghcr.io/thanostsiamis/fiona/api-service:latest'
     volumes:
-      - './api:/usr/src/app'
+      - 'fiona-data:/usr/src/app/resources/data_repository'
+      - 'fiona-results:/usr/src/app/resources/json_dumps'
     ports:
       - "5000:5000"
     environment:
-      - "FLASK_CONFIG=development"
+      - FIONA_RESULT_RETENTION_DAYS=${FIONA_RESULT_RETENTION_DAYS:-7}
+      - FIONA_LOG_LEVEL=${FIONA_LOG_LEVEL:-INFO}
+    restart: unless-stopped
     networks:
       - app-network
 
@@ -20,17 +27,13 @@ services:
     build:
       context: ./client_side
       dockerfile: Dockerfile
+      args:
+        # Next.js inlines NEXT_PUBLIC_* variables at build time.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}
     image: 'ghcr.io/thanostsiamis/fiona/client-service:latest'
-    volumes:
-      - './client_side:/usr/src/app'
-      - '/usr/src/app/node_modules'
     ports:
       - "3000:3000"
-    environment:
-      - "NODE_ENV=development"
-      # Next.js only inlines NEXT_PUBLIC_* variables into the client bundle.
-      - "NEXT_PUBLIC_API_URL=http://localhost:5000"
-      - "CHOKIDAR_USEPOLLING=true"
+    restart: unless-stopped
     depends_on:
       - api-service
     networks:

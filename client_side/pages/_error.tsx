@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export default function Ouch500() {
+// Pages Router custom error page. A file named `pages/error.tsx` would only create
+// an `/error` route; Next only treats `pages/_error.tsx` as the error boundary.
+export default function ErrorPage() {
     return <>
-        <h1 className={"font-extrabold text-gray-900 lg:text-7xl dark:text-white"}>OOPS! 500</h1>
+        <h1 className={"font-extrabold text-gray-900 lg:text-7xl dark:text-white"}>OOPS!</h1>
         <div className="flex items-center">
             <Image src="/resources/meltedEarth.png" alt="Melted Earth" width={500} height={500}/>
 

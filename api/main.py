@@ -1,4 +1,7 @@
 import json
+import logging
+import os
+import time
 from datetime import datetime
 from pathlib import Path
 from threading import Lock
@@ -7,16 +10,59 @@ from uuid import uuid4
 import ujson as ujson
 from flask import Flask, Response, jsonify, request
 
-from algorithm import process, logger, reset_global_values, safe_filename
+from algorithm import AlgorithmMemoryError, process, logger, reset_global_values, safe_filename
+
+# Logging belongs to the application entry point, not to the algorithm module.
+logging.basicConfig(level=getattr(logging, os.environ.get("FIONA_LOG_LEVEL", "INFO").upper(), logging.INFO))
 
 app = Flask("FIONA")
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "resources" / "data_repository"
 RESULTS_DIR = BASE_DIR / "resources" / "json_dumps"
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".json", ".tsv"}
+DEFAULT_RESULT_RETENTION_DAYS = 7
 # algorithm.py currently keeps per-run settings in module globals. Keep that
 # state isolated until it can be refactored into an explicit configuration object.
 PROCESSING_LOCK = Lock()
+
+
+def result_retention_days():
+    raw = os.environ.get("FIONA_RESULT_RETENTION_DAYS", str(DEFAULT_RESULT_RETENTION_DAYS))
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        logger.warning("Ignoring invalid FIONA_RESULT_RETENTION_DAYS=%r", raw)
+        return float(DEFAULT_RESULT_RETENTION_DAYS)
+
+
+def prune_old_results():
+    """Delete result files older than the configured retention period (0 disables pruning)."""
+    retention_days = result_retention_days()
+    if retention_days <= 0:
+        return
+    cutoff = time.time() - retention_days * 24 * 60 * 60
+    for path in RESULTS_DIR.glob("*.json"):
+        try:
+            if path.stat().st_mtime < cutoff:
+                path.unlink()
+        except OSError:
+            logger.warning("Could not remove expired result %s", path, exc_info=True)
+
+
+def prune_old_uploads():
+    """Remove datasets left behind by a crashed request (0 disables pruning)."""
+    retention_days = result_retention_days()
+    if retention_days <= 0:
+        return
+    cutoff = time.time() - retention_days * 24 * 60 * 60
+    for path in DATA_DIR.iterdir():
+        if not path.is_file() or path.name == ".gitkeep":
+            continue
+        try:
+            if path.stat().st_mtime < cutoff:
+                path.unlink()
+        except OSError:
+            logger.warning("Could not remove expired upload %s", path, exc_info=True)
 
 
 def json_response(payload, status=200):
@@ -81,28 +127,38 @@ def upload_file():
     # neither overwrite each other nor expose each other's results.
     job_id = uuid4().hex
     stored_name = f"{job_id}{extension}"
+    stored_path = DATA_DIR / stored_name
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    f.save(DATA_DIR / stored_name)
+    prune_old_results()
+    prune_old_uploads()
 
-    regex_only = parse_boolean(request.form.get('regex_transformation_only'))
-    generalised_only = parse_boolean(request.form.get('generalised_transformation_only'))
-    with PROCESSING_LOCK:
-        start_time = datetime.now()
-        try:
-            outlying_elements = process(stored_name, ndistinct_manual_set, first_time=True,
-                                        manual_override_long_column=long_column_cutoff,
-                                        manual_override_large_file_threshold=large_file_threshold_input,
-                                        regex_transformation_only=regex_only,
-                                        generalised_transformation_only=generalised_only)
-            if isinstance(outlying_elements, list):
-                merged_data = {}
-                for column in outlying_elements:
-                    column_result = process(stored_name, ndistinct_manual_set, first_time=False, column_name=column,
+    try:
+        f.save(stored_path)
+
+        regex_only = parse_boolean(request.form.get('regex_transformation_only'))
+        generalised_only = parse_boolean(request.form.get('generalised_transformation_only'))
+        with PROCESSING_LOCK:
+            start_time = datetime.now()
+            try:
+                outlying_elements = process(stored_name, ndistinct_manual_set, first_time=True,
+                                            manual_override_long_column=long_column_cutoff,
+                                            manual_override_large_file_threshold=large_file_threshold_input,
                                             regex_transformation_only=regex_only,
                                             generalised_transformation_only=generalised_only)
-                    merged_data.update(column_result)
-                outlying_elements = merged_data
+                if isinstance(outlying_elements, list):
+                    merged_data = {}
+                    for column in outlying_elements:
+                        column_result = process(stored_name, ndistinct_manual_set, first_time=False, column_name=column,
+                                                regex_transformation_only=regex_only,
+                                                generalised_transformation_only=generalised_only)
+                        merged_data.update(column_result)
+                    outlying_elements = merged_data
+            except ValueError as error:
+                return json_response({"error": str(error)}, 400)
+            except AlgorithmMemoryError as error:
+                logger.warning("A column could not be processed: %s", error, exc_info=True)
+                return json_response({"error": str(error)}, 500)
 
             result_name = f"{job_id}.json"
             with (RESULTS_DIR / result_name).open("w", encoding="utf-8") as outfile:
@@ -111,8 +167,12 @@ def upload_file():
             time_taken = end_time - start_time
             logger.debug(f"Time taken to process the file: {time_taken}")
             return json_response({"result": result_name}, 201)
-        finally:
-            reset_global_values()
+    finally:
+        reset_global_values()
+        try:
+            stored_path.unlink(missing_ok=True)
+        except OSError:
+            logger.warning("Could not remove uploaded dataset %s", stored_path, exc_info=True)
 
 
 @app.route("/api/fetch/<string:filename>", methods=['GET'])
@@ -133,6 +193,7 @@ def fetch(filename):
 @app.route("/api/history", methods=['GET'])
 def get_json_files():
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    prune_old_results()
     return json_response(sorted(path.name for path in RESULTS_DIR.glob('*.json')))
 
 

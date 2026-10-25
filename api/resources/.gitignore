@@ -1,2 +1,7 @@
-# Ignore CSV files inside the json_dumps folder
-/resources/json_dumps/*.csv
+# Uploaded datasets and generated results are user data and must never be committed.
+/data_repository/*
+!/data_repository/.gitkeep
+/json_dumps/*
+!/json_dumps/.gitkeep
+!/json_dumps/multipart_file/
+!/json_dumps/multipart_file/.gitkeep

@@ -13,6 +13,9 @@ yarn-error.log
 # Ignore build artifacts and output folders
 build/
 dist/
+.next/
+out/
+tsconfig.tsbuildinfo
 
 # Ignore log files and temporary files
 logs/

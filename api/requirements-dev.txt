@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Test-only dependencies (api/tests).
+pytest==7.4.4

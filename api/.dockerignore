@@ -1,3 +1,10 @@
 resources/
 
 .git/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+tests/
+pytest.ini
+requirements-dev.txt

@@ -1,21 +1,17 @@
 import gc
 import logging
 import os
-from datetime import datetime
 
 import chardet
 import joblib
 import numpy as np
 import pandas as pd
 from anytree import Node
-from cachetools import cached, TTLCache
 from doubledouble import DoubleDouble
 from joblib import Parallel, delayed
 
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-memory_problems = False
 ndistinct_manually_set = False
 ndistinct_manual_setting = 2
 large_file = False
@@ -23,6 +19,20 @@ long_column_limit = 36  # This is based on the length of a UUID
 large_file_threshold = 500000
 regex_only = False
 generalised_only = False
+# Tree growth is bounded by a deterministic leaf cap. The previous implementation
+# probed the machine's memory by allocating i x i matrices, which made the result
+# depend on the host and returned roughly the dataset size (so the automatic
+# ndistinctMin tuning never ran).
+MAX_LEAVES = 3000
+
+
+class AlgorithmMemoryError(MemoryError):
+    """Raised when one or more columns could not be processed without exhausting memory."""
+
+    def __init__(self, columns):
+        self.columns = [str(column) for column in columns]
+        super().__init__("Could not process column(s): " + ", ".join(self.columns))
+
 
 
 def safe_filename(filename) -> str:
@@ -46,25 +56,52 @@ def safe_filename(filename) -> str:
     return name or "upload"
 
 
+def detect_encoding(filename) -> str:
+    """Detect the encoding of a delimited file from a bounded sample."""
+    with open(filename, 'rb') as file_handle:
+        sample = file_handle.read(64 * 1024)
+    detected = chardet.detect(sample).get('encoding') or 'utf-8'
+    return detected
+
+
+def read_delimited(filename, separator, column_name=None):
+    """Read a CSV/TSV file as strings without turning literal NA values into missing data."""
+    detected = detect_encoding(filename)
+    # A sample can end in the middle of a multi-byte character or be too small to
+    # identify the encoding. Retry with UTF-8, then with Latin-1 as a last resort
+    # for legacy files before surfacing a decode error.
+    last_error = None
+    for encoding in dict.fromkeys((detected, 'utf-8', 'latin-1')):
+        try:
+            return pd.read_csv(
+                filename,
+                sep=separator,
+                dtype=str,
+                encoding=encoding,
+                keep_default_na=False,
+                usecols=[column_name] if column_name is not None else None,
+            )
+        except UnicodeDecodeError as error:
+            last_error = error
+    raise last_error
+
+
 def read_data(filename, column_name=None):
-    file_extension = filename.split(".")[-1]
+    file_extension = filename.split(".")[-1].lower()
     if file_extension == "csv":
-        with open(filename, 'rb') as f:
-            result = chardet.detect(f.read())
-        encoding = result['encoding']
-        if column_name is not None:
-            return pd.read_csv(filename, dtype=str, encoding=encoding, usecols=[column_name])
-        else:
-            return pd.read_csv(filename, dtype=str, encoding=encoding)
+        return read_delimited(filename, ",", column_name)
     elif file_extension == "xlsx":
-        return pd.read_excel(filename, dtype=str)
+        return pd.read_excel(filename, dtype=str, keep_default_na=False)
     elif file_extension == "json":
-        return pd.read_json(filename)
+        # JSON is the only reader that did not force strings. Numeric columns then
+        # reached tree_grow, which calls len()/startswith() on the values.
+        dataframe = pd.read_json(filename)
+        return dataframe.fillna('').astype(str)
     elif file_extension == "tsv":
-        return pd.read_csv(filename, sep='\t', dtype=str)
+        return read_delimited(filename, "\t", column_name)
     else:
         # TODO: Add database support here in the future
-        raise ValueError("Unsupported file format. Only CSV, XLSX, and JSON formats are supported.")
+        raise ValueError("Unsupported file format. Only CSV, XLSX, JSON, and TSV formats are supported.")
 
 
 def process_data(dataframe: pd.DataFrame):
@@ -84,9 +121,10 @@ def generalise_string(string: str, specificity_level=0):
     :return: the generalised equivalent of the string
     """
     string = str(string)
-    if specificity_level >= 0:
-        original_part = list(string[:specificity_level])
-        edited_part = list(string[specificity_level:])
+    if specificity_level < 0:
+        specificity_level = 0
+    original_part = list(string[:specificity_level])
+    edited_part = list(string[specificity_level:])
     for index in range(len(edited_part)):
         if edited_part[index].isupper():
             edited_part[index] = "U"
@@ -116,12 +154,12 @@ def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
     """
     if specificity_level == -2:
         unique_sets = []
-        hash_table = {}
+        seen_sets = set()
         for s in df[:, 1]:
             s_set = set(s)
-            hash_val = hash(frozenset(s_set))
-            if hash_val not in hash_table:
-                hash_table[hash_val] = s_set
+            set_key = frozenset(s_set)
+            if set_key not in seen_sets:
+                seen_sets.add(set_key)
                 unique_sets.append(s_set)
         return unique_sets
     elif specificity_level == -1:
@@ -133,30 +171,6 @@ def feature_to_split_on(specificity_level, df: np.ndarray, name: str):
         word_split = np.vectorize(character_split)
 
         return set(word_split(df[:, 0]))
-
-
-@cached(cache=TTLCache(maxsize=1, ttl=600))
-def calculate_machine_limit(dataset_size: int):
-    """
-    Find the maximum size of an empty NumPy matrix that can be created without causing a memory overflow.
-    :return: the maximum size of the matrix.
-    """
-    try:
-        for i in range(1, dataset_size + 100):
-            in_memory_variable = np.empty([i, i], dtype='float64')
-            del in_memory_variable
-            variable = i
-        logger.debug("Variable i is: " + str(i))
-        return variable
-    except MemoryError:
-        gc.collect()
-        # take a lower bound to make room for the other variables as well.
-        if memory_problems:
-            logger.debug("Variable i is: " + str(i))
-            return i - 8000
-        else:
-            logger.debug("Variable i is: " + str(i))
-            return i - 1000
 
 
 def tree_grow(column: pd.DataFrame, nDistinctMin=2):
@@ -172,7 +186,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
     root = Node(" ", children=[], data=np.asarray(column), specificity_level=-2)
     node_list = [root]
     global long_column_limit
-    limit = calculate_machine_limit(column.shape[0])
+    limit = MAX_LEAVES
     while node_list:
         current_node = node_list.pop(0)
         child_list = []
@@ -187,7 +201,7 @@ def tree_grow(column: pd.DataFrame, nDistinctMin=2):
                     if children_identifiers[0] == {'d'} or children_identifiers[0] == {'d', 's'}:
                         # TODO:Fix the latter case e.g. sddssdds
                         continue
-        if current_node.specificity_level == 0 and len(current_node.data[0, 0]) > long_column_limit:
+        if current_node.specificity_level == 0 and len(current_node.data[0, 0]) >= long_column_limit:
             continue
         if len(children_identifiers) == 1 and current_node.specificity_level == len(str(current_node.data[0, 0])):
             continue
@@ -354,25 +368,58 @@ def median_vector_can_fit(score_matrix):
     :return: Boolean flag that indicates whether the median can fit in main memory.
     """
     try:
-        medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
+        np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1)
         gc.collect()
         return True
-    except:
+    except (MemoryError, ValueError, TypeError, OverflowError):
+        logger.debug("Median vector does not fit in memory", exc_info=True)
         gc.collect()
         return False
+
+
+def resolve_ranking_scores(medians, leaves):
+    """
+    Return the values used for the percentile sweep and the ranking method.
+
+    For columns with two leaves (booleans, yes/no, gender, ...) the score matrix is
+    symmetric, so every leaf gets the same median. Percentiles of a constant vector
+    cannot distinguish a rare value from a common one. In that case fall back to leaf
+    mass: lower mass means more anomalous. If both scores and masses are uniform there
+    is no outlier signal at all (for example a single-value column).
+    """
+    medians = np.asarray(medians)
+    if medians.size <= 1:
+        return medians, None
+
+    masses = np.asarray([leaf.data.shape[0] for leaf in leaves], dtype='float64')
+    masses_vary = masses.size > 0 and any(mass != masses[0] for mass in masses)
+    # If every leaf has the same generalised form there is no syntactic variation
+    # to rank ("a" and "b" are both "l"). Frequency is then the only signal.
+    generalised_forms = {generalise_string(leaf.data[0, 0]) for leaf in leaves}
+    if masses_vary and len(generalised_forms) == 1:
+        return masses, "mass"
+
+    if any(value != medians[0] for value in medians):
+        return medians, "score"
+
+    if masses_vary:
+        return masses, "mass"
+
+    return medians, None
 
 
 def process_attribute(dataframe: pd.DataFrame):
     global ndistinct_manually_set
     attribute = process_data(dataframe)
+    fibonacci = None
+    tries = 0
     if not ndistinct_manually_set:
         root = tree_grow(attribute)
         ndistinct = 2
         fibonacci = fibonacci_generator()
-        tries = 0  # failsafe mechanism
-        while True or tries < 40:
+        while tries < 40:
             leaves = root.leaves
-            if len(leaves) < calculate_machine_limit(dataset_size=dataframe.shape[0]):
+            if len(leaves) <= MAX_LEAVES:
                 break
             else:
                 # if the file is large then going to the next fibonacci won't do much.
@@ -385,6 +432,12 @@ def process_attribute(dataframe: pd.DataFrame):
                 ndistinct = next(fibonacci)
                 root = tree_grow(attribute, nDistinctMin=ndistinct)
                 tries += 1
+        leaves = root.leaves
+        if len(leaves) > MAX_LEAVES:
+            raise MemoryError(
+                f"The tree produced {len(leaves)} leaves, above the {MAX_LEAVES}-leaf limit. "
+                "Try increasing the ndistinct setting."
+            )
 
     else:
         root = tree_grow(attribute, nDistinctMin=ndistinct_manual_setting)
@@ -393,7 +446,11 @@ def process_attribute(dataframe: pd.DataFrame):
     score_matrix = score_function(leaves)
     try:
         medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
-    except:
+    except (MemoryError, ValueError, TypeError, OverflowError) as error:
+        if fibonacci is None:
+            logger.exception("Could not compute score medians for a manually configured column")
+            raise
+        logger.warning("Could not compute score medians; retrying with a larger ndistinct value: %s", error)
         ndistinct = next(fibonacci)
         root = tree_grow(attribute, nDistinctMin=ndistinct)
         leaves = root.leaves
@@ -411,14 +468,16 @@ def process_attribute(dataframe: pd.DataFrame):
             tries += 1
         medians = np.ma.median(np.ma.masked_invalid(score_matrix, 0), axis=1).data
 
-    output_dictionary = {}
+    medians, ranking_method = resolve_ranking_scores(medians, leaves)
+    if ranking_method is None:
+        return {"outliers": {}, "patterns": {}, "_ranking": None}
+
+    output_dictionary = {"_ranking": ranking_method}
     outlying_elements = {}
     pattern_elements = {}
 
     threshold_values = np.linspace(1, 99, 5000)
     previous_values = [-1, -1]
-    pattern_indices_dict = {}
-    lower_outlying_indices_dict = {}
     for threshold in threshold_values:
         element_dict_outliers = {}
         element_dict_patterns = {}
@@ -433,8 +492,6 @@ def process_attribute(dataframe: pd.DataFrame):
         else:
             previous_values[0] = pattern_indices.shape[0]
             previous_values[1] = lower_outlying_indices.shape[0]
-            pattern_indices_dict[threshold] = pattern_indices
-            lower_outlying_indices_dict[threshold] = lower_outlying_indices
             for i in pattern_indices:
                 uniques, counts = (np.unique(leaves[i[0]].data[:, 0], return_counts=True))
                 element_dict_patterns[leaves[i[0]].name] = dict(np.asarray((uniques, counts)).T)
@@ -501,28 +558,6 @@ def replace_repeated_chars(string):
     return ''.join(result)
 
 
-def find_difference_index(str1, str2):
-    """
-    Helper function that finds which index two strings differ
-    :param str1: A string
-    :param str2: Another string
-    :return: The index that two strings differ. Return -1 if they don't
-    """
-    str1 = str(str1)
-    str2 = str(str2)
-
-    length = min(len(str1), len(str2))
-
-    for i in range(length):
-        if str1[i] != str2[i]:
-            return i
-
-    if len(str1) != len(str2):
-        return length
-
-    return -1
-
-
 def merge_dictionaries(dict1, dict2):
     """
     Takes two dictionaries and merges them. Helper function
@@ -578,6 +613,8 @@ def convert_to_percentage(data, number):
 
 def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.DataFrame):
     col_outliers_and_patterns = process_attribute(dataframe_column)
+    # process_attribute is internal and may add metadata for the caller.
+    ranking_method = col_outliers_and_patterns.pop('_ranking', 'score')
     lexicon = {column_name: {'outliers': {}, 'patterns': {}}}
     has_previous_threshold_dict = False
     previous_threshold_dict_value = -1
@@ -586,10 +623,22 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
     generalised_strings_ratio_counter = 0
     regexed_strings_ratio_sum = 0
     regexed_strings_ratio_counter = 0
-    for threshold_level in col_outliers_and_patterns['outliers'].keys():
-        if threshold_level < list(col_outliers_and_patterns['outliers'].keys())[
-            len(col_outliers_and_patterns['outliers'].keys()) // 2] and len(
-            list(col_outliers_and_patterns['outliers'].keys())) > 1:
+    threshold_levels = list(col_outliers_and_patterns['outliers'].keys())
+    if not threshold_levels:
+        # No leaf could be ranked (for example a column with a single value).
+        return lexicon
+    median_threshold = threshold_levels[len(threshold_levels) // 2]
+    # Mass-ranked results (and the single-threshold case) must not be filtered by
+    # generalised syntax: a rare "b" has the same generalised form as a common "a".
+    skip_pattern_filter = ranking_method == "mass" or len(threshold_levels) == 1
+
+    def is_outlier_threshold(threshold_level):
+        # A single surviving threshold is a valid classification (binary columns
+        # collapse to one threshold); do not drop the only result.
+        return len(threshold_levels) == 1 or threshold_level < median_threshold
+
+    for threshold_level in threshold_levels:
+        if is_outlier_threshold(threshold_level):
             lexicon[column_name]['outliers'][threshold_level] = {}
             inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
             pattern_set_generalised = set()
@@ -617,32 +666,22 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
                     continue
                 else:
                     generalised_string_not_in_pattern_set += 1
-            try:
-
-                ratio_generalised = generalised_string_in_pattern_set / (
-                        generalised_string_in_pattern_set + generalised_string_not_in_pattern_set)
+            generalised_total = generalised_string_in_pattern_set + generalised_string_not_in_pattern_set
+            if generalised_total:
+                ratio_generalised = generalised_string_in_pattern_set / generalised_total
                 generalised_strings_ratio_sum += ratio_generalised
                 generalised_strings_ratio_counter += 1
 
-            except:
-                logger.debug(" ")
-
-            try:
-                ratio_regexed = regexed_string_in_pattern_set / (
-                        regexed_string_in_pattern_set + regexed_string_not_in_pattern_set)
+            regexed_total = regexed_string_in_pattern_set + regexed_string_not_in_pattern_set
+            if regexed_total:
+                ratio_regexed = regexed_string_in_pattern_set / regexed_total
                 regexed_strings_ratio_sum += ratio_regexed
                 regexed_strings_ratio_counter += 1
-
-            except:
-                logger.debug(" ")
-    try:
-        avg_regex_ratio = regexed_strings_ratio_sum / regexed_strings_ratio_counter
-    except:
-        avg_regex_ratio = 0
-    try:
-        avg_generalised_ratio = generalised_strings_ratio_sum / generalised_strings_ratio_counter
-    except:
-        avg_generalised_ratio = 0
+    avg_regex_ratio = regexed_strings_ratio_sum / regexed_strings_ratio_counter if regexed_strings_ratio_counter else 0
+    avg_generalised_ratio = (
+        generalised_strings_ratio_sum / generalised_strings_ratio_counter
+        if generalised_strings_ratio_counter else 0
+    )
     # if both zero then choose generalised.
     apply_generalised_comparison = True
     if avg_regex_ratio > avg_generalised_ratio and avg_regex_ratio < 0.98 and avg_regex_ratio > 0.42:
@@ -651,19 +690,21 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
         apply_generalised_comparison = False
     if generalised_only:
         apply_generalised_comparison = True
-    for threshold_level in col_outliers_and_patterns['outliers'].keys():
-        if threshold_level < list(col_outliers_and_patterns['outliers'].keys())[
-            len(col_outliers_and_patterns['outliers'].keys()) // 2] and len(
-            list(col_outliers_and_patterns['outliers'].keys())) > 1:
+    for threshold_level in threshold_levels:
+        if is_outlier_threshold(threshold_level):
             lexicon[column_name]['outliers'][threshold_level] = {}
             inner_dicts = col_outliers_and_patterns['patterns'][threshold_level]
             pattern_set = set()
-            for representation in inner_dicts.keys():
-                if apply_generalised_comparison:
-                    pattern_set.add(generalise_string(next(iter(inner_dicts[representation]))))
+            # With mass ranking (or a single threshold) a rare value often shares
+            # its generalised form with the common value (e.g. "a" and "b" are both
+            # "l"), so applying the pattern filter would erase the only outlier.
+            if not skip_pattern_filter:
+                for representation in inner_dicts.keys():
+                    if apply_generalised_comparison:
+                        pattern_set.add(generalise_string(next(iter(inner_dicts[representation]))))
 
-                else:
-                    pattern_set.add(replace_repeated_chars(generalise_string(next(iter(inner_dicts[representation])))))
+                    else:
+                        pattern_set.add(replace_repeated_chars(generalise_string(next(iter(inner_dicts[representation])))))
             for outlier_rep in col_outliers_and_patterns['outliers'][threshold_level].keys():
                 first_outliers_element = list(col_outliers_and_patterns['outliers'][threshold_level][outlier_rep])[0]
                 transformed_string = generalise_string(first_outliers_element)
@@ -693,11 +734,21 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
     marked_for_clearance = []
     helper_dict = {}
     for threshold_level in sorted(col_outliers_and_patterns['patterns'].keys(), reverse=True):
-        if threshold_level >= list(col_outliers_and_patterns['outliers'].keys())[
-            len(col_outliers_and_patterns['outliers'].keys()) // 2]:
+        if len(threshold_levels) == 1 or threshold_level >= median_threshold:
             helper_dict[threshold_level] = {}
             lexicon[column_name]['patterns'][threshold_level] = {}
             pattern_set = set()
+            if not skip_pattern_filter:
+                for pattern_rep in col_outliers_and_patterns['patterns'][threshold_level].keys():
+                    first_patterns_element = list(col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])[0]
+
+                    transformed_string = generalise_string(first_patterns_element)
+
+                    if not apply_generalised_comparison:
+                        transformed_string = replace_repeated_chars(transformed_string)
+
+                    pattern_set.add(transformed_string)
+
             for pattern_rep in col_outliers_and_patterns['patterns'][threshold_level].keys():
                 first_patterns_element = list(col_outliers_and_patterns['patterns'][threshold_level][pattern_rep])[0]
 
@@ -712,7 +763,6 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
                     lexicon[column_name]['patterns'][threshold_level][transformed_string][pattern_rep] = {}
                 temp_pat_dict = col_outliers_and_patterns['patterns'][threshold_level][pattern_rep]
                 lexicon[column_name]['patterns'][threshold_level][transformed_string][pattern_rep].update(temp_pat_dict)
-                pattern_set.add(transformed_string)
 
             for outlier_representative in col_outliers_and_patterns['outliers'][threshold_level]:
                 first_outliers_element = \
@@ -745,7 +795,6 @@ def add_outlying_elements_to_attribute(column_name: str, dataframe_column: pd.Da
                                                                                    threshold_level])
     lexicon[column_name]['patterns'] = convert_to_percentage(lexicon[column_name]['patterns'],
                                                              total_number_of_elements_in_database)
-    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     return lexicon
 
 
@@ -773,7 +822,6 @@ def reset_global_values():
     :return: None
     """
     global ndistinct_manually_set
-    global memory_problems
     global ndistinct_manual_setting
     global large_file
     global long_column_limit
@@ -781,9 +829,8 @@ def reset_global_values():
     global regex_only
     global generalised_only
 
-    memory_problems = False
     ndistinct_manually_set = False
-    ndistinct_manual_setting = 0
+    ndistinct_manual_setting = 2
     large_file = False
     long_column_limit = 36
     large_file_threshold = 500000
@@ -804,12 +851,10 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
             generalised_transformation_only=False):
     global large_file_threshold
     if manual_override_large_file_threshold is not None:
-        print("Manual override")
         large_file_threshold = manual_override_large_file_threshold
-        print(large_file_threshold)
+        logger.debug("Large-file threshold overridden to %s", large_file_threshold)
     else:
-        print("No manual override")
-        print(large_file_threshold)
+        logger.debug("Using default large-file threshold: %s", large_file_threshold)
     global long_column_limit
     if manual_override_long_column is not None:
         long_column_limit = manual_override_long_column
@@ -821,28 +866,35 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
     if isinstance(file, (str, os.PathLike)):
         dataframe = read_data(os.path.join(BASE_DIR, "resources", "data_repository", safe_filename(file)), column_name)
     else:
-        try:
-            dataframe = read_data(os.path.join(BASE_DIR, "resources", "data_repository", safe_filename(file.filename)),
-                                  column_name)
-        except AttributeError:
-            dataframe = read_data(os.path.join(
-                BASE_DIR, "resources", "datasets", "datasets_testing_purposes", "flights", "flightsDirty.csv"))
+        filename = getattr(file, "filename", None)
+        if not filename:
+            raise ValueError("A dataset file is required.")
+        dataframe = read_data(
+            os.path.join(BASE_DIR, "resources", "data_repository", safe_filename(filename)), column_name)
+
+    if dataframe.shape[0] == 0:
+        raise ValueError("The dataset contains no data rows.")
+    if dataframe.shape[1] == 0:
+        raise ValueError("The dataset contains no columns.")
 
     if dataframe.shape[0] > large_file_threshold and first_time:  # if dataframe too large
         return list(dataframe.columns)
+
+    def process_serially():
+        return [
+            process_column(
+                column, dataframe[column], manual_override_long_column,
+                regex_transformation_only, generalised_transformation_only)
+            for column in dataframe.columns
+        ]
+
     if dataframe.shape[0] < large_file_threshold:
         with joblib.parallel_backend("loky"):
-            print("Using parallel processing")
+            logger.debug("Processing columns in parallel")
             try:
                 if manual_override_ndistinct is not None:
                     set_global_variables(manual_override_ndistinct)
-                    output = {}
-                    for column in dataframe.columns:
-                        single_column = dataframe[column]
-                        output.update(process_column(
-                            column, single_column, manual_override_long_column,
-                            regex_transformation_only, generalised_transformation_only)[0])
-                    return output
+                    results = process_serially()
                 else:
                     results = Parallel(n_jobs=-1)(
                         delayed(process_column)(
@@ -850,26 +902,16 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
                             regex_transformation_only, generalised_transformation_only)
                         for column in dataframe.columns
                     )
-            except:
-                output = {}
-                for column in dataframe.columns:
-                    single_column = dataframe[column]
-                    output.update(process_column(
-                        column, single_column, manual_override_long_column,
-                        regex_transformation_only, generalised_transformation_only)[0])
-                return output
+            except Exception:
+                logger.warning("Parallel processing failed; retrying the columns serially", exc_info=True)
+                results = process_serially()
     else:
         global large_file
         large_file = True
         if manual_override_ndistinct is not None:
             set_global_variables(manual_override_ndistinct)
-        output = {}
-        for column in dataframe.columns:
-            single_column = dataframe[column]
-            output.update(process_column(
-                column, single_column, manual_override_long_column,
-                regex_transformation_only, generalised_transformation_only)[0])
-        return output
+        results = process_serially()
+
     output = {}
     error_columns = []
 
@@ -879,12 +921,16 @@ def process(file, manual_override_ndistinct=None, first_time=True, column_name=N
             error_columns.append(error_column)
         else:
             output.update(column_result)
+
+    # A MemoryError in a worker only costs that column its parallel slot. Retry it
+    # once serially, then report a real failure instead of returning a partial result.
+    failed_columns = []
     for column in error_columns:
         single_column = dataframe[column]
         try:
             output.update(add_outlying_elements_to_attribute(column, single_column))
-        except:
-            global memory_problems
-            memory_problems = True
-            output.update(add_outlying_elements_to_attribute(column, single_column))
+        except MemoryError:
+            failed_columns.append(column)
+    if failed_columns:
+        raise AlgorithmMemoryError(failed_columns)
     return output

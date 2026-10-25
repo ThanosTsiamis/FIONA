@@ -1,0 +1,67 @@
+# ---------------------------------------------------------------------------
+# Operating system and editor files
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+dist/
+
+# ---------------------------------------------------------------------------
+# Node.js / Next.js
+# ---------------------------------------------------------------------------
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ---------------------------------------------------------------------------
+# Environment files and local configuration
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------------------
+# Logs and temporary files
+# ---------------------------------------------------------------------------
+*.log
+logs/
+tmp/
+
+# ---------------------------------------------------------------------------
+# API runtime data (uploads and generated results)
+# The nested api/resources/.gitignore repeats these rules so the directory
+# remains protected if it is used outside the repository root.
+# ---------------------------------------------------------------------------
+api/resources/data_repository/*
+!api/resources/data_repository/.gitkeep
+api/resources/json_dumps/*
+!api/resources/json_dumps/.gitkeep
+!api/resources/json_dumps/multipart_file/
+!api/resources/json_dumps/multipart_file/.gitkeep
