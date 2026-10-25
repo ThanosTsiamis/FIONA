@@ -15,9 +15,7 @@ export default function ErrorPage() {
             </span>
         </div>
         <Link href="/">
-            <a>
-                Why don&apos;t you check the <u>homepage</u>?
-            </a>
+            Why don&apos;t you check the <u>homepage</u>?
         </Link>
     </>
 }

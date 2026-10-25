@@ -11,9 +11,7 @@ interface PageButtonProps {
 const PageButton: React.FC<PageButtonProps> = ({ href, label, icon, iconLabel }) => (
     <div className="border border-gray-200 rounded-md p-4 max-w-xs absolute top-8 right-8">
         <p className="text-lg font-semibold">
-            <Link href={href}>
-                <a className="text-gray-800 no-underline hover:underline">{label}</a>
-            </Link>
+            <Link href={href} className="text-gray-800 no-underline hover:underline">{label}</Link>
             <span role="img" aria-label={iconLabel}>{icon}</span>
         </p>
     </div>

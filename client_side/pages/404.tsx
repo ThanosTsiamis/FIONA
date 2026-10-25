@@ -14,9 +14,7 @@ export default function FourOFour() {
                 been dispatched to search high and low for the missing page.</span>
         </div>
         <Link href="/">
-            <a>
-                Why don&apos;t you check the <u>homepage</u>?
-            </a>
+            Why don&apos;t you check the <u>homepage</u>?
         </Link>
     </>
 }
